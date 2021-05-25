@@ -1,0 +1,163 @@
+<!--https://flowingdata.com/2016/08/23/make-a-moving-bubbles-chart-to-show-clustering-and-distributions/-->
+<!DOCTYPE html>
+<head>
+    <title>Moving Bubble Tutorial</title>
+    <link rel="stylesheet" href="style/style.css" type="text/css" media="screen" />
+    <meta charset="utf-8">
+</head>
+<body>   
+    <div id="main-wrapper">
+        <div id="chart"></div>
+    </div><!-- @end #main-wrapper -->
+    <script src="js/d3-3-5-5.min.js"></script>
+    <script>
+        var margin = {top: 16, right: 0, bottom: 0, left: 0},
+        width = 1900 - margin.left - margin.right,
+        height = 1000 - margin.top - margin.bottom;
+
+        var svg = d3.select("#chart").append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+        //First, set a few variables, as shown below.
+        //The node_radius variable is, as you’d expect, the radius of each node. 
+        //The padding is the space between each node within a cluster, in pixels. 
+        //cluster_padding refers to the minimum space between nodes that belong to different clusters. 
+        //Finally, num_nodes is the total number of nodes to create for this visualization.
+        var node_radius = 5,  //ขนาดของ node default = 6
+            padding = 1,  //ระยะห่างของแต่ละ node เวลาอยู่ใน cluster
+            cluster_padding = 5, //ระยะในการดีดตัวระหว่างเปลี่ยน cluster
+            num_nodes = 300;  //จำนวน node default = 30
+        //Then, we want four clusters, each in a different position. 
+        //Also, each cluster will be a different color. We set the x-y positions and colors like so.
+        // Foci
+        var foci = {
+            "cenpos": { x: 1000, y: 450, color: "#C0C0C0" },            
+            "toppos": { x: 1000, y: 100, color: "#0099FF" },
+            "toprightpos1": { x: 1175, y: 170, color: "#3366FF" },          
+            "toprightpos2": { x: 1290, y: 300, color: "#9966FF" },                        
+            "rightpos": { x: 1340, y: 450, color: "#FF00FF" },
+            "rightbottompos1": { x: 1290, y: 610, color: "#FF3399" },
+            "rightbottompos2": { x: 1175, y: 740, color: "#FF5050" },
+            "bottompos": { x: 1000, y: 800, color: "#FF9933" },
+            "lefttoppos1": { x: 830, y: 170, color: "#FFFF00" },
+            "lefttoppos2": { x: 710, y: 300, color: "#99FF33" },
+            "leftpos": { x: 660, y: 450, color: "#33CC33" },
+            "topleftpos1": { x: 710, y: 610, color: "#00FF99" },                                    
+            "topleftpos2": { x: 830, y: 740, color: "#33CCCC" },         
+        };
+        //Initialize num_nodes node objects all in the top position. 
+        //The added Math.random() to the x and y coordinates is to add some randomness to the initial positions, 
+        //so that the force layout doesn’t get mixed up.        
+        // Create node objects
+        var nodes = d3.range(0, num_nodes).map(function(o, i) {
+            return {
+                id: "node" + i,
+                x: foci.toppos.x + Math.random(),
+                y: foci.toppos.y + Math.random(),
+                radius: node_radius,
+                choice: "cenpos",  //start cluster
+            }
+        });            
+        //Create the force layout, which uses the node objects in its initialization.
+        // Force-directed layout
+        var force = d3.layout.force()
+            .nodes(nodes)
+            .size([width, height])
+            .gravity(0)
+            .charge(0)
+            .friction(.91)
+            .on("tick", tick)
+            .start();
+        //Okay, now add some actual circles to the SVG object. Placement and color is based on nodes.
+        // Draw circle for each node.
+        var circle = svg.selectAll("circle")
+            .data(nodes)
+            .enter().append("circle")
+            .attr("id", function(d) { return d.id; })
+            .attr("class", "node")
+            .style("fill", function(d) { return foci[d.choice].color; });  
+        //For a smooth load, instead of a random, bouncy one, use a transition for the circles as they come onto the screen. This is straight from Mike’s example.
+        // For smoother initial transition to settling spots.
+        circle.transition()
+            .duration(900)
+            .delay(function(d,i) { return i * 5; })
+            .attrTween("r", function(d) {
+                var i = d3.interpolate(0, d.radius);
+                return function(t) { return d.radius = i(t); };
+            });
+        //In any case, here’s tick(). It runs continuously on loop, changing the position and color of circles as necessary.
+        function tick(e) {
+            circle
+              .each(gravity(.051 * e.alpha))
+              .each(collide(.5))
+              .style("fill", function(d) { return foci[d.choice].color; })
+              .attr("cx", function(d) { return d.x; })
+              .attr("cy", function(d) { return d.y; });
+          }
+        //The gravity() function moves circles towards their defined foci.
+        // Move nodes toward cluster focus.
+        function gravity(alpha) {
+            return function(d) {
+            d.y += (foci[d.choice].y - d.y) * alpha;
+            d.x += (foci[d.choice].x - d.x) * alpha;
+            };
+        }
+        //Then the collide() provides a force that ensures circles don’t overlap. They bounce against each other instead.
+        // Resolve collisions between nodes.
+        function collide(alpha) {
+            var quadtree = d3.geom.quadtree(nodes);
+            return function(d) {
+                var r = d.radius + node_radius + Math.max(padding, cluster_padding),
+                nx1 = d.x - r,
+                nx2 = d.x + r,
+                ny1 = d.y - r,
+                ny2 = d.y + r;
+                quadtree.visit(function(quad, x1, y1, x2, y2) {
+                    if (quad.point && (quad.point !== d)) {
+                        var x = d.x - quad.point.x,
+                            y = d.y - quad.point.y,
+                            l = Math.sqrt(x * x + y * y),
+                            r = d.radius + quad.point.radius + (d.choice === quad.point.choice ? padding : cluster_padding);
+                        if (l < r) {
+                            l = (l - r) / l * alpha;
+                            d.x -= x *= l;
+                            d.y -= y *= l;
+                            quad.point.x += x;
+                            quad.point.y += y;
+                        }
+                    }
+                    return x1 > nx2 || x2 < nx1 || y1 > ny2 || y2 < ny1;
+                });
+            };
+        }
+        //Movement
+        //In short, to make circles move on your screen, you change the choice attributes. Write a function that does this, and then use setTimeout() to call the function at set intervals.
+        //In the function below, timer(), a choice is randomly selected and then you change a random node to that choice. You resume() the force to set the circles moving again (they eventually settle in a spot otherwise). At the end of the function, setTimeout() is called again to schedule the next call.
+        // Run function periodically to make things move.
+        var timeout;
+        function timer() {
+            
+            // Random place for a node to go
+            var choices = d3.keys(foci);
+            var foci_index = Math.floor( Math.random() * choices.length );
+            var choice = d3.keys(foci)[foci_index];
+            
+            // Update random node
+            var random_index = Math.floor( Math.random() * nodes.length );
+            nodes[random_index].cx = foci[choice].x;
+            nodes[random_index].cy = foci[choice].y;
+            nodes[random_index].choice = choice;
+            
+            force.resume();
+            
+            // Run it again in a few seconds.
+            timeout = setTimeout(timer, 40);   //set speed  default = 400
+        }
+        
+        timeout = setTimeout(timer, 400);
+      
+    </script>
+</body>
+</html>
