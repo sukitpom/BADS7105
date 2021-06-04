@@ -1,0 +1,1098 @@
+<!--https://flowingdata.com/2016/08/23/make-a-moving-bubbles-chart-to-show-clustering-and-distributions/-->
+<!DOCTYPE html>
+<head>
+    <title>A day in lif of Master's students (BADS 2020)</title>
+    <!--<link rel="stylesheet" href="style/style.css" type="text/css" media="screen" />-->  
+    <style>table th, table th * {
+        vertical-align: top;
+    }</style>
+    <meta charset="utf-8">
+</head>
+<body>   
+    <table style="width:100%">
+        <tr>
+
+    <th>
+    <h1>A day in the life of Master's student (BADS-7105)</h1>
+    <h1><div id="time_number">00:00</div> </h1>
+    <h3><div id="activities">-</div></h3>
+    <div id="main-wrapper">
+        <div id="chart"></div>
+    </div><!-- @end #main-wrapper -->
+    <script src="js/d3-3-5-5.min.js"></script>
+    <script>
+        var margin = {top: 0, right: 0, bottom: 0, left: 0},
+        width = 1500 - margin.left - margin.right,
+        height = 1000 - margin.top - margin.bottom;
+
+        var sched_objs = [],
+        curr_minute = 0;
+
+        var svg = d3.select("#chart").append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+        //First, set a few variables, as shown below.
+        //The node_radius variable is, as you’d expect, the radius of each node. 
+        //The padding is the space between each node within a cluster, in pixels. 
+        //cluster_padding refers to the minimum space between nodes that belong to different clusters. 
+        //Finally, num_nodes is the total number of nodes to create for this visualization.
+        var node_radius = 10,  //ขนาดของ node default = 6
+            padding = 1,  //ระยะห่างของแต่ละ node เวลาอยู่ใน cluster
+            cluster_padding = 5, //ระยะในการดีดตัวระหว่างเปลี่ยน cluster
+            num_nodes = 33;  //จำนวน node default = 32
+        var center_act = "Sleeping",
+            center_pt = { "x": 750, "y": 365 };
+            var act_codes = [
+            {"index": "0", "short": "Sleeping", "desc": "Sleeping"},
+            {"index": "1", "short": "Gaming", "desc": "Play games"},
+            {"index": "2", "short": "Relaxing", "desc": "Socializing, Relaxing, and Leisure"},
+            {"index": "3", "short": "Sports", "desc": "Sports, Exercise, and Recreation"},
+            {"index": "4", "short": "Commuting", "desc": "Commuting"},
+            {"index": "5", "short": "Personal Care", "desc": "Personal Care"},
+            {"index": "6", "short": "Eating & Drinking", "desc": "Eating and Drinking"},
+            {"index": "7", "short": "Education", "desc": "Education"},
+            {"index": "8", "short": "Work", "desc": "Work and Work-Related Activities"},
+            {"index": "9", "short": "Housework", "desc": "Household Activities"},
+            {"index": "10", "short": "Meeting", "desc": "Meeting of work."},
+            {"index": "11", "short": "Family", "desc": "Family activities"},
+            {"index": "12", "short": "Shopping", "desc": "Consumer Purchases"},
+            ]; 
+        //Then, we want four clusters, each in a different position. 
+        //Also, each cluster will be a different color. We set the x-y positions and colors like so.
+        // Foci //กำหนด position & color สำหรับแต่ละ cluster
+        // freq ในการ coding มีผลต่อ index
+        var foci = {
+            "cenpos": { x: 750, y: 450, color: "#C0C0C0" },  //sleeping
+            "rightbottompos1": { x: 1040, y: 610, color: "#FF3399" },  //gamin
+            "rightbottompos2": { x: 950, y: 740, color: "#FF5050" }, //relaxing                        
+            "bottompos": { x: 750, y: 795, color: "#FF9933" }, //sports  
+            "bottomleftpos2": { x: 580, y: 740, color: "#33CCCC" },   //commuting
+            "bottomleftpos1": { x: 460, y: 610, color: "#00FF99" },   //personal care                      
+            "leftpos": { x: 410, y: 450, color: "#33CC33" }, //eating
+            "lefttoppos2": { x: 460, y: 290, color: "#99FF33" },  //education 
+            "lefttoppos1": { x: 580, y: 165, color: "#FFFF00" }, //work
+            "toppos": { x: 750, y: 100, color: "#0099FF" },  //housework
+            "toprightpos1": { x: 950, y: 165, color: "#3366FF" },  //meeting
+            "toprightpos2": { x: 1040, y: 290, color: "#9966FF" },   //family
+            "rightpos": { x: 1090, y: 450, color: "#FF00FF" },  //shopping
+            
+        };
+
+	// Used for percentages by minute
+	var act_counts = { "0": 0, "1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0, "7": 0, "8": 0, "9": 0, "10": 0, "11": 0, "12": 0, "13": 0, "14": 0, "15": 0, "16": 0 };
+        var label = svg.selectAll("text")
+            .data(act_codes)
+            .enter().append("text")
+            .attr("class", "actlabel")
+            .attr("x", function(d, i) {
+                //console.log(d.desc);
+                if (d.desc == center_act) {
+                    return center_pt.x;
+                } else {
+                    var theta = 2 * Math.PI / (act_codes.length-1);
+                    return 340 * Math.cos(i * theta)+center_pt.x;
+                }    
+            })
+            //.attr("y",100);
+            .attr("y", function(d, i) {
+                //console.log(d.desc);
+                if (d.desc == center_act) {
+                    return center_pt.y;
+                } else {
+                    var theta = 2 * Math.PI / (act_codes.length-1);
+                    return 340 * Math.sin(i * theta)+center_pt.y;
+                }
+                
+            });
+            label.append("tspan")
+            //.attr("x",100)
+            .attr("x", function() { return d3.select(this.parentNode).attr("x"); })
+            // .attr("dy", "1.3em")
+            .attr("text-anchor", "middle")
+            .text(function(d) {
+                return d.short;
+            });
+        label.append("tspan")
+            //.attr("dy",100)
+            .attr("dy", "1.3em")
+            //.attr("x",100)
+            .attr("x", function() { return d3.select(this.parentNode).attr("x"); })
+            .attr("text-anchor", "middle")
+            .attr("class", "actpct")
+            .text(function(d) {
+                //console.log(act_counts[0]);
+                //return "100%"
+                return act_counts[d.index] + "%";
+            });
+            
+        //Initialize num_nodes node objects all in the Center position. 
+        //The added Math.random() to the x and y coordinates is to add some randomness to the initial positions, 
+        //so that the force layout doesn’t get mixed up.        
+        // Create node objects
+        var nodes = d3.range(0, num_nodes).map(function(o, i) {
+            return {
+                id: "node" + i,
+                x: foci.cenpos.x + Math.random(),   //x: foci.toppos.x + Math.random(),
+                y: foci.cenpos.y + Math.random(),   //y: foci.toppos.y + Math.random(),
+                radius: node_radius,
+                choice: "cenpos",  //start cluster
+            }
+        });            
+        //Create the force layout, which uses the node objects in its initialization.
+        // Force-directed layout
+        var force = d3.layout.force()
+            .nodes(nodes)
+            .size([width, height])
+            .gravity(0)
+            .charge(0)
+            .friction(.91)
+            .on("tick", tick)
+            .start();
+      
+        //Okay, now add some actual circles to the SVG object. Placement and color is based on nodes.
+        // Draw circle for each node.
+        var circle = svg.selectAll("circle")
+            .data(nodes)
+            .enter().append("circle")
+            .attr("id", function(d) { return d.id; })
+            .attr("class", "node")
+            .style("fill", function(d) { return foci[d.choice].color; });  
+        //For a smooth load, instead of a random, bouncy one, use a transition for the circles as they come onto the screen. This is straight from Mike’s example.
+        // For smoother initial transition to settling spots.
+        circle.transition()
+            .duration(1000)   //หน่วงเวลาในการปรากฎครั้งแรกของ node
+            .delay(function(d,i) { return i * 5; })  
+            .attrTween("r", function(d) {
+                var i = d3.interpolate(0, d.radius);
+                return function(t) { return d.radius = i(t); };
+            });
+        //In any case, here’s tick(). It runs continuously on loop, changing the position and color of circles as necessary.
+
+        function tick(e) {
+            circle
+              .each(gravity(0.051 * e.alpha)) //.each(gravity(.051 * e.alpha))   //ความสมูสในการพุ่งออกจากจุดกลาง
+              .each(collide(.5))
+              .style("fill", function(d) { return foci[d.choice].color; })   //เปลี่ยนสีเวลาย้ายตำแหน่ง
+              .attr("cx", 100)  
+              .attr("cx", function(d) { return d.x; })   //เปลี่ยนตำแหน่ง x
+              .attr("cy", function(d) { return d.y; });
+          }
+        //The gravity() function moves circles towards their defined foci.
+        // Move nodes toward cluster focus.
+        function gravity(alpha) {
+            return function(d) {
+            d.y += (foci[d.choice].y - d.y) * alpha;
+            d.x += (foci[d.choice].x - d.x) * alpha;
+            };
+        }
+        //Then the collide() provides a force that ensures circles don’t overlap. They bounce against each other instead.
+        // Resolve collisions between nodes.
+      
+        function collide(alpha) {
+            var quadtree = d3.geom.quadtree(nodes);
+            return function(d) {
+                var r = d.radius + node_radius + Math.max(padding, cluster_padding),
+                nx1 = d.x - r,
+                nx2 = d.x + r,
+                ny1 = d.y - r,
+                ny2 = d.y + r;
+                quadtree.visit(function(quad, x1, y1, x2, y2) {
+                    if (quad.point && (quad.point !== d)) {
+                        var x = d.x - quad.point.x,
+                            y = d.y - quad.point.y,
+                            l = Math.sqrt(x * x + y * y),
+                            r = d.radius + quad.point.radius + (d.choice === quad.point.choice ? padding : cluster_padding);
+                        if (l < r) {
+                            l = (l - r) / l * alpha;
+                            d.x -= x *= l;
+                            d.y -= y *= l;
+                            quad.point.x += x;
+                            quad.point.y += y;
+                        }
+                    }
+                    return x1 > nx2 || x2 < nx1 || y1 > ny2 || y2 < ny1;
+                });
+            };
+        }
+        var timer_digit = d3.timer(function(duration) {  //สร้างตัวแปร timer โดยใช้ function d3.timer โดยใน timer ต้องมี function ที่เก็บค่าระยะเวลาไว้
+
+            //console.log('time digit:' + duration + '=' + document.getElementById("time_number").innerHTML);
+            if (duration < 86500) {
+            //if (duration < 2000) {               
+                document.getElementById("time_number").innerHTML = String(Math.floor(duration/3600)).padStart(2,'0') + ":" + String(Math.floor((duration % 3600)/60)).padStart(2,'0')
+            }
+            else
+            {
+                document.getElementById("time_number").innerHTML = "23:59";  //ปัดเศษเป็นค่าสุดท้าย
+                //timer.stop(); //ตรวจสอบระยะเวลา
+            }
+           },4000);
+
+    // Output readable percent based on count.
+    function readablePercent(n) {
+        
+        //var pct = 100 * n / 1000;
+        var pct = n / num_nodes *100;
+        //console.log(n);
+        if (pct < 1 && pct > 0) {
+            pct = "<1%";
+        } else {
+            pct = Math.round(pct) + "%";
+        }
+        //console.log(pct);
+        return pct;
+
+    }     
+
+    function countnodes (){
+        var j;
+        for (j = 0; j < 13; j++) {
+            act_counts[j] = 0;
+            nodes.forEach((nd) => {
+                if (nd["choice"]==d3.keys(foci)[j]) {
+                    act_counts[j] = act_counts[j]+1;
+                };
+            });
+        };
+    };
+    countnodes();
+    var act_list = [
+    {"time_index":1,"node_index":0,"foci_index":0,"desc":"นอน"},
+    {"time_index":1,"node_index":2,"foci_index":11,"desc":"เล่นกับแมว"},
+    {"time_index":1,"node_index":3,"foci_index":0,"desc":"นอน"},
+    {"time_index":1,"node_index":9,"foci_index":2,"desc":"ดูโคนันเดอะซีรี่ย์"},
+    {"time_index":1,"node_index":10,"foci_index":2,"desc":"ตื่นนอน"},
+    {"time_index":1,"node_index":13,"foci_index":0,"desc":"เข้านอน"},
+    {"time_index":1,"node_index":14,"foci_index":8,"desc":"เคลียร์งานนิดหน่อย"},
+    {"time_index":1,"node_index":16,"foci_index":7,"desc":"อ่านบทความ"},
+    {"time_index":1,"node_index":17,"foci_index":0,"desc":"นอนหลับ"},
+    {"time_index":1,"node_index":18,"foci_index":1,"desc":"เล่นเกมส์กับเพื่อน"},
+    {"time_index":1,"node_index":19,"foci_index":0,"desc":"นอน"},
+    {"time_index":1,"node_index":21,"foci_index":0,"desc":"นอน"},
+    {"time_index":1,"node_index":24,"foci_index":2,"desc":"สวดมนต์"},
+    {"time_index":1,"node_index":24,"foci_index":0,"desc":"เข้านอน"},
+    {"time_index":1,"node_index":25,"foci_index":0,"desc":"Bed time"},
+    {"time_index":1,"node_index":28,"foci_index":2,"desc":"watching Korean series"},
+    {"time_index":1,"node_index":10,"foci_index":5,"desc":"ชั่งน้ำหนัก"},
+    {"time_index":4,"node_index":27,"foci_index":5,"desc":"อาบน้ำเตรียมเข้านอน"},
+    {"time_index":9,"node_index":4,"foci_index":0,"desc":"เข้านอน"},
+    {"time_index":9,"node_index":8,"foci_index":0,"desc":"นอน"},
+    {"time_index":9,"node_index":21,"foci_index":0,"desc":"เข้านอน"},
+    {"time_index":9,"node_index":27,"foci_index":2,"desc":"เล่นมือถือ Facebook, Instagram"},
+    {"time_index":9,"node_index":30,"foci_index":2,"desc":"เข้า youtube หาอะไรเรียนเพิ่ม"},
+    {"time_index":9,"node_index":30,"foci_index":0,"desc":"เข้านอน"},
+    {"time_index":9,"node_index":32,"foci_index":0,"desc":"นอน"},
+    {"time_index":17,"node_index":2,"foci_index":0,"desc":"นอน"},
+    {"time_index":17,"node_index":5,"foci_index":0,"desc":"นอน"},
+    {"time_index":17,"node_index":9,"foci_index":0,"desc":"นอน"},
+    {"time_index":17,"node_index":11,"foci_index":0,"desc":"เข้านอน"},
+    {"time_index":17,"node_index":21,"foci_index":0,"desc":"Sleep"},
+    {"time_index":17,"node_index":26,"foci_index":0,"desc":"หลับไปไม่รู้ตัว"},
+    {"time_index":17,"node_index":27,"foci_index":0,"desc":"นอนหลับ"},
+    {"time_index":20,"node_index":10,"foci_index":2,"desc":"นั่งสมาธิ"},
+    {"time_index":20,"node_index":10,"foci_index":5,"desc":"แต่งตัวไปทำงาน"},
+    {"time_index":32,"node_index":16,"foci_index":0,"desc":"นอน"},
+    {"time_index":32,"node_index":18,"foci_index":0,"desc":"นอน"},
+    {"time_index":47,"node_index":14,"foci_index":0,"desc":"นอน"},
+    {"time_index":47,"node_index":28,"foci_index":2,"desc":"watching Korean series"},
+    {"time_index":56,"node_index":10,"foci_index":4,"desc":"เดินทางไปทำงาน"},
+    {"time_index":77,"node_index":21,"foci_index":2,"desc":"ตื่นมาดูสุนัข"},
+    {"time_index":77,"node_index":22,"foci_index":5,"desc":"Wake-up"},
+    {"time_index":84,"node_index":15,"foci_index":2,"desc":"กดเลื่อนนาฬิกาปลุก"},
+    {"time_index":84,"node_index":20,"foci_index":2,"desc":"Wake up"},
+    {"time_index":84,"node_index":22,"foci_index":7,"desc":"Read online content"},
+    {"time_index":85,"node_index":20,"foci_index":5,"desc":"Take a shower"},
+    {"time_index":88,"node_index":31,"foci_index":2,"desc":"Wake up to snooze the clock"},
+    {"time_index":90,"node_index":31,"foci_index":2,"desc":"Wake up to snooze the clock, second time"},
+    {"time_index":91,"node_index":24,"foci_index":2,"desc":"ตื่นนอน"},
+    {"time_index":91,"node_index":12,"foci_index":2,"desc":"Wake up autonomously"},
+    {"time_index":91,"node_index":15,"foci_index":2,"desc":"ตื่นนอน"},
+    {"time_index":91,"node_index":20,"foci_index":4,"desc":"Take a van to office"},
+    {"time_index":91,"node_index":21,"foci_index":11,"desc":"ฝึกสุนัข"},
+    {"time_index":91,"node_index":22,"foci_index":8,"desc":"Review materials & tasks"},
+    {"time_index":91,"node_index":29,"foci_index":2,"desc":"ตื่นนอน"},
+    {"time_index":92,"node_index":31,"foci_index":5,"desc":"Get shower and get dress"},
+    {"time_index":94,"node_index":15,"foci_index":5,"desc":"อาบน้ำ"},
+    {"time_index":95,"node_index":12,"foci_index":2,"desc":"Play facebook"},
+    {"time_index":95,"node_index":21,"foci_index":11,"desc":"ให้อาหารสุนัข"},
+    {"time_index":95,"node_index":24,"foci_index":4,"desc":"ขับรถไปบ้านย่า"},
+    {"time_index":95,"node_index":29,"foci_index":5,"desc":"อาบน้ำ"},
+    {"time_index":96,"node_index":15,"foci_index":5,"desc":"ทาครีม"},
+    {"time_index":99,"node_index":7,"foci_index":2,"desc":"ตื่นมาเลื่อนนาฬิกาปลุก"},
+    {"time_index":99,"node_index":8,"foci_index":5,"desc":"ตื่นนอน อาบน้ำ แปรงฟัน"},
+    {"time_index":99,"node_index":9,"foci_index":0,"desc":"ตื่นมาปิดนาฬิกาปลุก รอบที่ 1"},
+    {"time_index":99,"node_index":15,"foci_index":4,"desc":"เดินทางออกจากบ้าน"},
+    {"time_index":99,"node_index":21,"foci_index":5,"desc":"ตื่นเพื่อปิดนาฬิกาปลุก"},
+    {"time_index":99,"node_index":21,"foci_index":2,"desc":"ตื่นนอน"},
+    {"time_index":99,"node_index":29,"foci_index":4,"desc":"เดินทางไปทำงาน"},
+    {"time_index":101,"node_index":6,"foci_index":2,"desc":"ตื่นนอน"},
+    {"time_index":101,"node_index":21,"foci_index":5,"desc":"อาบน้ำ"},
+    {"time_index":101,"node_index":24,"foci_index":2,"desc":"ตักบาตร"},
+    {"time_index":102,"node_index":6,"foci_index":5,"desc":"แปรงฟัน"},
+    {"time_index":102,"node_index":7,"foci_index":2,"desc":"ตื่นมาเลื่อนนาฬิกาปลุก"},
+    {"time_index":104,"node_index":6,"foci_index":5,"desc":"อาบน้ำ"},
+    {"time_index":104,"node_index":27,"foci_index":2,"desc":"ตื่นนอน เล่นมือถือ"},
+    {"time_index":106,"node_index":2,"foci_index":11,"desc":"ให้อาหารแมว"},
+    {"time_index":106,"node_index":6,"foci_index":5,"desc":"แต่งตัว/ทาครีมบำรุง"},
+    {"time_index":106,"node_index":7,"foci_index":2,"desc":"ตื่นมาเลื่อนนาฬิกาปลุก"},
+    {"time_index":106,"node_index":9,"foci_index":0,"desc":"ตื่นมาปิดนาฬิกาปลุก รอบที่ 2"},
+    {"time_index":106,"node_index":11,"foci_index":2,"desc":"ตื่นนอน "},
+    {"time_index":106,"node_index":12,"foci_index":2,"desc":"Listen to podcast"},
+    {"time_index":106,"node_index":13,"foci_index":5,"desc":"อาบน้ำ แต่งตัว"},
+    {"time_index":106,"node_index":15,"foci_index":4,"desc":"ขึ้นรถตู้บริษัท"},
+    {"time_index":106,"node_index":17,"foci_index":2,"desc":"ตื่นนอน"},
+    {"time_index":106,"node_index":20,"foci_index":4,"desc":"Arrive at office"},
+    {"time_index":106,"node_index":21,"foci_index":5,"desc":"แต่งตัวแต่งหน้า"},
+    {"time_index":106,"node_index":22,"foci_index":3,"desc":"Outdoor exercise & shower"},
+    {"time_index":106,"node_index":23,"foci_index":2,"desc":"ตื่นนอน"},
+    {"time_index":106,"node_index":24,"foci_index":3,"desc":"ออกกำลังกายแบบ Cardio"},
+    {"time_index":106,"node_index":26,"foci_index":2,"desc":"นาฬิกาปลุก ครั้งแรก"},
+    {"time_index":106,"node_index":27,"foci_index":5,"desc":"อาบน้ำ แต่งตัว"},
+    {"time_index":106,"node_index":29,"foci_index":8,"desc":"ถึงที่ทำงาน"},
+    {"time_index":106,"node_index":31,"foci_index":6,"desc":"Laundry"},
+    {"time_index":106,"node_index":21,"foci_index":2,"desc":"Wake up"},
+    {"time_index":107,"node_index":21,"foci_index":6,"desc":"ทำอาหารเช้า"},
+    {"time_index":109,"node_index":6,"foci_index":4,"desc":"ขับรถออกจากบ้าน"},
+    {"time_index":109,"node_index":10,"foci_index":5,"desc":"แปรงฟันและอาบน้ำ"},
+    {"time_index":110,"node_index":7,"foci_index":2,"desc":"ตื่นมาเลื่อนนาฬิกาปลุก"},
+    {"time_index":110,"node_index":12,"foci_index":5,"desc":"Take a shower"},
+    {"time_index":110,"node_index":20,"foci_index":6,"desc":"Eat breakfast"},
+    {"time_index":110,"node_index":21,"foci_index":6,"desc":"ดื่มกาแฟ nespresso"},
+    {"time_index":110,"node_index":29,"foci_index":6,"desc":"กินนม-ขนมปัง"},
+    {"time_index":111,"node_index":4,"foci_index":2,"desc":"ตื่นนอน"},
+    {"time_index":111,"node_index":19,"foci_index":2,"desc":"ตื่นนอน"},
+    {"time_index":111,"node_index":21,"foci_index":4,"desc":"ขับรถไปทำงาน"},
+    {"time_index":112,"node_index":4,"foci_index":5,"desc":"แปรงฟัน/ อาบน้ำ"},
+    {"time_index":112,"node_index":19,"foci_index":5,"desc":"อาบน้ำ"},
+    {"time_index":114,"node_index":1,"foci_index":2,"desc":"ตื่นนอน"},
+    {"time_index":114,"node_index":2,"foci_index":0,"desc":"นอน"},
+    {"time_index":114,"node_index":3,"foci_index":2,"desc":"ตื่นนอน"},
+    {"time_index":114,"node_index":5,"foci_index":2,"desc":"ตื่นนอน"},
+    {"time_index":114,"node_index":6,"foci_index":10,"desc":"ถึงที่ทำงาน เริ่มประชุมตอนเช้า (ด้วย MS Team)"},
+    {"time_index":114,"node_index":7,"foci_index":5,"desc":"ตื่นและลุกไปอาบน้ำ แต่งตัว"},
+    {"time_index":114,"node_index":8,"foci_index":4,"desc":"ขับรถไปทำงาน"},
+    {"time_index":114,"node_index":9,"foci_index":2,"desc":"ตื่นนอน"},
+    {"time_index":114,"node_index":11,"foci_index":5,"desc":"อาบน้ำ"},
+    {"time_index":114,"node_index":17,"foci_index":4,"desc":"ขับรถไปทำงาน"},
+    {"time_index":114,"node_index":20,"foci_index":8,"desc":"Morning talk with friend"},
+    {"time_index":114,"node_index":21,"foci_index":5,"desc":"อาบน้ำ"},
+    {"time_index":114,"node_index":21,"foci_index":6,"desc":"ดื่ม Whey Protein + วิตามิน"},
+    {"time_index":114,"node_index":23,"foci_index":5,"desc":"อาบน้ำ แต่งตัวไปทำงาน"},
+    {"time_index":114,"node_index":26,"foci_index":2,"desc":"นาฬิกาปลุก ครั้งที่สอง"},
+    {"time_index":114,"node_index":29,"foci_index":10,"desc":"เปิด email เตรียมการประชุม"},
+    {"time_index":114,"node_index":32,"foci_index":2,"desc":"ตื่นนอน"},
+    {"time_index":115,"node_index":3,"foci_index":5,"desc":"อาบน้ำ"},
+    {"time_index":115,"node_index":9,"foci_index":1,"desc":"เล่มเกมส์"},
+    {"time_index":116,"node_index":12,"foci_index":6,"desc":"Have breakfast"},
+    {"time_index":116,"node_index":21,"foci_index":4,"desc":"เดินทางไปทำงาน"},
+    {"time_index":116,"node_index":24,"foci_index":3,"desc":"อัดคลิปออกกำลังกาย"},
+    {"time_index":116,"node_index":26,"foci_index":5,"desc":"อาบน้ำ"},
+    {"time_index":117,"node_index":3,"foci_index":4,"desc":"เดินทางไปทำงาน"},
+    {"time_index":117,"node_index":13,"foci_index":4,"desc":"ขึ้นบีทีเอสเพื่อเดินทางไปทำงาน"},
+    {"time_index":117,"node_index":21,"foci_index":5,"desc":"แต่งหน้าแต่งตัว"},
+    {"time_index":117,"node_index":29,"foci_index":10,"desc":"ประชุมกับแผนกซ่อมบำรุง"},
+    {"time_index":117,"node_index":32,"foci_index":5,"desc":"อาบน้ำแต่งตัว"},
+    {"time_index":119,"node_index":9,"foci_index":5,"desc":"อาบน้ำ"},
+    {"time_index":119,"node_index":19,"foci_index":6,"desc":"กินข้าวเช้า"},
+    {"time_index":121,"node_index":24,"foci_index":5,"desc":"อาบน้ำ แต่งตัว"},
+    {"time_index":121,"node_index":21,"foci_index":5,"desc":"Take a shower"},
+    {"time_index":122,"node_index":1,"foci_index":5,"desc":"อาบน้ำ"},
+    {"time_index":122,"node_index":3,"foci_index":8,"desc":"สแกนนิ้ว"},
+    {"time_index":122,"node_index":5,"foci_index":5,"desc":"อาบน้ำ"},
+    {"time_index":122,"node_index":7,"foci_index":4,"desc":"ขับรถไปทำงาน"},
+    {"time_index":122,"node_index":10,"foci_index":8,"desc":"เริ่มทำงาน"},
+    {"time_index":122,"node_index":11,"foci_index":11,"desc":"พาแม่ไปทำบุญที่วัด"},
+    {"time_index":122,"node_index":12,"foci_index":6,"desc":"Brew coffee"},
+    {"time_index":122,"node_index":14,"foci_index":2,"desc":"ตื่นรอบที่ 1"},
+    {"time_index":122,"node_index":15,"foci_index":4,"desc":"ถึงบริษัท"},
+    {"time_index":122,"node_index":17,"foci_index":8,"desc":"เริ่มทำงาน เช็คอีเมลล์"},
+    {"time_index":122,"node_index":18,"foci_index":2,"desc":"ตื่นนอน"},
+    {"time_index":122,"node_index":20,"foci_index":8,"desc":"Start Working"},
+    {"time_index":122,"node_index":21,"foci_index":6,"desc":"กินข้าวเช้า"},
+    {"time_index":122,"node_index":22,"foci_index":6,"desc":"Breakfast"},
+    {"time_index":122,"node_index":25,"foci_index":2,"desc":"Wake up"},
+    {"time_index":122,"node_index":26,"foci_index":8,"desc":"ทำงาน แบบ Work from home"},
+    {"time_index":122,"node_index":27,"foci_index":4,"desc":"เดินทางไป 101 Digital True Park (BTS)"},
+    {"time_index":122,"node_index":28,"foci_index":2,"desc":"wake up"},
+    {"time_index":122,"node_index":29,"foci_index":10,"desc":"เตรียมเรื่องประชุมกับแผนก maintenance support"},
+    {"time_index":122,"node_index":30,"foci_index":2,"desc":"ตื่นนอน"},
+    {"time_index":122,"node_index":32,"foci_index":4,"desc":"ออกไปทำงาน"},
+    {"time_index":123,"node_index":15,"foci_index":5,"desc":"เข้าห้องน้ำแต่งหน้า"},
+    {"time_index":123,"node_index":18,"foci_index":5,"desc":"อาบน้ำแปรงฟัน"},
+    {"time_index":123,"node_index":25,"foci_index":2,"desc":"Play smart phone"},
+    {"time_index":123,"node_index":30,"foci_index":2,"desc":"นอนเล่นมือถือ"},
+    {"time_index":124,"node_index":4,"foci_index":4,"desc":"เดินทางไปทำงาน"},
+    {"time_index":124,"node_index":9,"foci_index":5,"desc":"แต่งตัว"},
+    {"time_index":124,"node_index":15,"foci_index":6,"desc":"กินข้าวเช้า"},
+    {"time_index":124,"node_index":21,"foci_index":4,"desc":"เข้าออฟฟิต"},
+    {"time_index":124,"node_index":26,"foci_index":6,"desc":"จิบกาแฟและอาหารเช้าเบาๆไปพร้อมกัน"},
+    {"time_index":124,"node_index":3,"foci_index":8,"desc":"เดินรอบคลัง"},
+    {"time_index":125,"node_index":12,"foci_index":8,"desc":"Prepare working"},
+    {"time_index":125,"node_index":21,"foci_index":6,"desc":"กินอาหารเช้า"},
+    {"time_index":125,"node_index":23,"foci_index":4,"desc":"เดินไปทำงาน"},
+    {"time_index":125,"node_index":21,"foci_index":6,"desc":"Breakfast"},
+    {"time_index":126,"node_index":19,"foci_index":4,"desc":"ขับรถไปทำงาน"},
+    {"time_index":126,"node_index":21,"foci_index":8,"desc":"ตรวจสอบ email"},
+    {"time_index":126,"node_index":25,"foci_index":1,"desc":"Play ROV"},
+    {"time_index":127,"node_index":15,"foci_index":4,"desc":"เข้าออฟฟิต"},
+    {"time_index":129,"node_index":0,"foci_index":2,"desc":"ตื่นนอน"},
+    {"time_index":129,"node_index":1,"foci_index":5,"desc":"แต่งตัว"},
+    {"time_index":129,"node_index":2,"foci_index":2,"desc":"ตื่นนอน"},
+    {"time_index":129,"node_index":3,"foci_index":8,"desc":"ดูแผนตู้เข้า"},
+    {"time_index":129,"node_index":5,"foci_index":5,"desc":"แต่งหน้า"},
+    {"time_index":129,"node_index":6,"foci_index":10,"desc":"ถึงที่ทำงาน เริ่มประชุมตอนเช้า (ด้วย MS Team)"},
+    {"time_index":129,"node_index":8,"foci_index":8,"desc":"ถึงที่ทำงาน"},
+    {"time_index":129,"node_index":9,"foci_index":6,"desc":"กินอกไก่ไข่ต้ม คลีน (พ่อทำไว้ให้)"},
+    {"time_index":129,"node_index":11,"foci_index":6,"desc":"กินกาแฟ all cafe+ ครัวซอง"},
+    {"time_index":129,"node_index":13,"foci_index":6,"desc":"ซื้อข้าวเหนียวไก่ปิ้งหน้าตึกที่ทำงาน"},
+    {"time_index":129,"node_index":14,"foci_index":2,"desc":"ตื่นรอบที่ 2"},
+    {"time_index":129,"node_index":15,"foci_index":8,"desc":"เช็ดทำความสะอาดโต๊ะ"},
+    {"time_index":129,"node_index":16,"foci_index":0,"desc":"ตื่นนอน"},
+    {"time_index":129,"node_index":21,"foci_index":8,"desc":"เช็คอีเมล"},
+    {"time_index":129,"node_index":22,"foci_index":2,"desc":"Garden"},
+    {"time_index":129,"node_index":23,"foci_index":6,"desc":"ซื้อกาแฟไปดื่มที่ทำงาน"},
+    {"time_index":129,"node_index":24,"foci_index":6,"desc":"กินข้าวเช้า"},
+    {"time_index":129,"node_index":28,"foci_index":5,"desc":"Shower"},
+    {"time_index":129,"node_index":29,"foci_index":10,"desc":"ประชุมกับแผนก maintenance support"},
+    {"time_index":129,"node_index":30,"foci_index":5,"desc":"อาบน้ำ"},
+    {"time_index":129,"node_index":31,"foci_index":9,"desc":"Dry clothes"},
+    {"time_index":129,"node_index":21,"foci_index":4,"desc":"Pick up friend"},
+    {"time_index":130,"node_index":0,"foci_index":5,"desc":"อาบน้ำ"},
+    {"time_index":130,"node_index":15,"foci_index":8,"desc":"เริ่มทำงาน อ่าน e-mail"},
+    {"time_index":130,"node_index":21,"foci_index":9,"desc":"ล้างจาน"},
+    {"time_index":131,"node_index":4,"foci_index":6,"desc":"ทานข้าวเช้า"},
+    {"time_index":131,"node_index":13,"foci_index":6,"desc":"นั่งกินข้าวตรงโซน kitchen"},
+    {"time_index":131,"node_index":14,"foci_index":6,"desc":"ไปซื้อของกินที่ 7-11"},
+    {"time_index":131,"node_index":16,"foci_index":5,"desc":"อาบน้ำ"},
+    {"time_index":132,"node_index":7,"foci_index":6,"desc":"เก็บของที่โต๊ะทำงาน แล้วออกไปกินข้าวเช้า"},
+    {"time_index":132,"node_index":8,"foci_index":6,"desc":"เดินไปร้านกาแฟ"},
+    {"time_index":132,"node_index":15,"foci_index":10,"desc":"ประชุมงานกับลูกน้องในทีม"},
+    {"time_index":132,"node_index":18,"foci_index":8,"desc":"ทำงาน Work from home"},
+    {"time_index":132,"node_index":21,"foci_index":10,"desc":"เตรียมตัวประชุมตอนเช้า"},
+    {"time_index":132,"node_index":22,"foci_index":6,"desc":"Coffee"},
+    {"time_index":132,"node_index":29,"foci_index":10,"desc":"ประชุมกับแผนก production"},
+    {"time_index":133,"node_index":21,"foci_index":4,"desc":"Travel to coffee shop"},
+    {"time_index":134,"node_index":5,"foci_index":4,"desc":"เดินออกจากคอนโด"},
+    {"time_index":134,"node_index":27,"foci_index":7,"desc":"เตรียมพร้อมเริ่มเรียนวิชาแรก"},
+    {"time_index":134,"node_index":30,"foci_index":4,"desc":"ขับรถไปทำงาน"},
+    {"time_index":134,"node_index":31,"foci_index":6,"desc":"Have a tuna sandwich"},
+    {"time_index":135,"node_index":5,"foci_index":4,"desc":"ขึ้น mrt ไปทำงาน"},
+    {"time_index":135,"node_index":21,"foci_index":9,"desc":"รดน้ำต้นไม้"},
+    {"time_index":136,"node_index":0,"foci_index":6,"desc":"กินอาหาเช้า"},
+    {"time_index":136,"node_index":1,"foci_index":4,"desc":"เดินทางไปทำงาน"},
+    {"time_index":136,"node_index":2,"foci_index":5,"desc":"อาบน้ำ"},
+    {"time_index":136,"node_index":3,"foci_index":8,"desc":"ทำ Label ติดงาน"},
+    {"time_index":136,"node_index":4,"foci_index":8,"desc":"ทำงาน "},
+    {"time_index":136,"node_index":6,"foci_index":6,"desc":"ไปซื้อข้าวเช้า และกินข้าวเช้า"},
+    {"time_index":136,"node_index":9,"foci_index":8,"desc":"เปิด MS Team เช็คอินการทำงาน"},
+    {"time_index":136,"node_index":12,"foci_index":8,"desc":"Start working"},
+    {"time_index":136,"node_index":13,"foci_index":8,"desc":"Morning Talk"},
+    {"time_index":136,"node_index":14,"foci_index":7,"desc":"เริ่มเรียนออนไลน์"},
+    {"time_index":136,"node_index":15,"foci_index":10,"desc":"ประชุมงานกับหัวหน้าฝ่าย production"},
+    {"time_index":136,"node_index":16,"foci_index":5,"desc":"แต่งตัว"},
+    {"time_index":136,"node_index":17,"foci_index":6,"desc":"สั่งกาแฟผ่าน Food panda"},
+    {"time_index":136,"node_index":18,"foci_index":9,"desc":"เดินไปเก็บผ้าที่ตากไว้"},
+    {"time_index":136,"node_index":19,"foci_index":8,"desc":"ถึงที่ทำงาน"},
+    {"time_index":136,"node_index":21,"foci_index":4,"desc":"ออกจากบ้าน"},
+    {"time_index":136,"node_index":21,"foci_index":10,"desc":"Morning meeting"},
+    {"time_index":136,"node_index":21,"foci_index":8,"desc":"ทำงาน"},
+    {"time_index":136,"node_index":22,"foci_index":10,"desc":"Team meeting"},
+    {"time_index":136,"node_index":24,"foci_index":8,"desc":"เริ่มทำงานประจำที่รัก"},
+    {"time_index":136,"node_index":25,"foci_index":5,"desc":"Take a shower"},
+    {"time_index":136,"node_index":26,"foci_index":8,"desc":"ใช้ MS Team และ Line เป็นหลักในการทำงาน"},
+    {"time_index":136,"node_index":27,"foci_index":7,"desc":"เรียนวิชาแรก"},
+    {"time_index":136,"node_index":28,"foci_index":10,"desc":"Conference meeting"},
+    {"time_index":136,"node_index":29,"foci_index":10,"desc":"เตรียมข้อมูลประชุมจากฝั่ง production ไปยังแผนกซ่อมบำรุง"},
+    {"time_index":136,"node_index":31,"foci_index":7,"desc":"Take online class"},
+    {"time_index":136,"node_index":32,"foci_index":8,"desc":"ถึงที่ทำงาน"},
+    {"time_index":136,"node_index":21,"foci_index":7,"desc":"On-line study"},
+    {"time_index":137,"node_index":9,"foci_index":8,"desc":"เปิดอีเมล์ ตอบเมล์ Support ลูกค้า"},
+    {"time_index":138,"node_index":7,"foci_index":8,"desc":"เริ่มทำงาน เช็ค Email"},
+    {"time_index":138,"node_index":21,"foci_index":4,"desc":"ขึ้นรถไฟฟ้าไปทำงาน"},
+    {"time_index":138,"node_index":30,"foci_index":8,"desc":"ถึงที่ทำงาน เริ่มทำงาน"},
+    {"time_index":140,"node_index":1,"foci_index":8,"desc":"ถึงที่ทำงาน"},
+    {"time_index":140,"node_index":16,"foci_index":6,"desc":"กินข้าวเช้า"},
+    {"time_index":140,"node_index":18,"foci_index":8,"desc":"ทำงาน Work from home"},
+    {"time_index":141,"node_index":25,"foci_index":6,"desc":"Eat breakfast"},
+    {"time_index":143,"node_index":1,"foci_index":6,"desc":"กินข้าวเช้า"},
+    {"time_index":143,"node_index":5,"foci_index":4,"desc":"ถึงออฟฟิต"},
+    {"time_index":143,"node_index":6,"foci_index":10,"desc":"agile meeting กับ top 3 project"},
+    {"time_index":143,"node_index":8,"foci_index":10,"desc":"ประชุมกับผู้บริหาร"},
+    {"time_index":143,"node_index":11,"foci_index":8,"desc":"เริ่มทำงาน (work from home)"},
+    {"time_index":143,"node_index":13,"foci_index":8,"desc":"เริ่มทำงาน"},
+    {"time_index":143,"node_index":16,"foci_index":9,"desc":"ล้างจาน"},
+    {"time_index":143,"node_index":21,"foci_index":8,"desc":"ทำงาน"},
+    {"time_index":143,"node_index":22,"foci_index":8,"desc":"Clear emails & admin tasks"},
+    {"time_index":143,"node_index":28,"foci_index":6,"desc":"Order coffee on grab delivery"},
+    {"time_index":143,"node_index":32,"foci_index":8,"desc":"ทำงาน"},
+    {"time_index":144,"node_index":5,"foci_index":6,"desc":"ซื้อกาแฟ"},
+    {"time_index":145,"node_index":25,"foci_index":7,"desc":"Read a book"},
+    {"time_index":145,"node_index":10,"foci_index":6,"desc":"กินข้าวเช้า"},
+    {"time_index":146,"node_index":16,"foci_index":4,"desc":"เดินทางไปทำงาน"},
+    {"time_index":146,"node_index":21,"foci_index":4,"desc":"ถึงที่ทำงาน"},
+    {"time_index":146,"node_index":29,"foci_index":10,"desc":"ประชุมวางแผนการทำงานในวันนี้กับแผนกซ่อมบำรุง"},
+    {"time_index":147,"node_index":1,"foci_index":6,"desc":"ซื้อกาแฟ"},
+    {"time_index":147,"node_index":5,"foci_index":8,"desc":"เช็คอีเมล วางแผนงานที่จะทำ"},
+    {"time_index":147,"node_index":15,"foci_index":6,"desc":"ไปกินกาแฟ"},
+    {"time_index":151,"node_index":0,"foci_index":4,"desc":"เดินทางด้วย BTS ไปทำงาน"},
+    {"time_index":151,"node_index":1,"foci_index":8,"desc":"เริ่มงาน"},
+    {"time_index":151,"node_index":2,"foci_index":10,"desc":"Meeting"},
+    {"time_index":151,"node_index":3,"foci_index":8,"desc":"ตรวจสอบงานที่ลงตู้"},
+    {"time_index":151,"node_index":5,"foci_index":10,"desc":"ประชุม"},
+    {"time_index":151,"node_index":6,"foci_index":8,"desc":"เริ่ม Focus งาน"},
+    {"time_index":151,"node_index":7,"foci_index":10,"desc":"ประชุมผ่าน MS Team"},
+    {"time_index":151,"node_index":9,"foci_index":8,"desc":"สกรัมผ่าน MS Team"},
+    {"time_index":151,"node_index":10,"foci_index":10,"desc":"ประชุมกับผู้บริหาร"},
+    {"time_index":151,"node_index":11,"foci_index":8,"desc":"เคลียร์งาน"},
+    {"time_index":151,"node_index":15,"foci_index":8,"desc":"ทำรีพอต"},
+    {"time_index":151,"node_index":17,"foci_index":10,"desc":"ประชุมนำเสนองาน"},
+    {"time_index":151,"node_index":21,"foci_index":10,"desc":"ประชุม"},
+    {"time_index":151,"node_index":22,"foci_index":8,"desc":"Deal with customers"},
+    {"time_index":151,"node_index":25,"foci_index":3,"desc":"go to GYM"},
+    {"time_index":151,"node_index":29,"foci_index":8,"desc":"ทำงานตามแผนที่วางไว้"},
+    {"time_index":153,"node_index":31,"foci_index":7,"desc":"Answer wrong quiz"},
+    {"time_index":158,"node_index":0,"foci_index":4,"desc":"ถึงที่ทำงาน เริ่มทำงาน"},
+    {"time_index":158,"node_index":9,"foci_index":8,"desc":"วิเคราะห์ สรุปเอกสาร Requirement"},
+    {"time_index":158,"node_index":13,"foci_index":8,"desc":"ไปรับ requirement ใหม่จาก user"},
+    {"time_index":158,"node_index":19,"foci_index":6,"desc":"กินกาแฟ"},
+    {"time_index":158,"node_index":23,"foci_index":2,"desc":"อัพรูปตอนเที่ยวลง facebook"},
+    {"time_index":158,"node_index":24,"foci_index":6,"desc":"คั้นน้ำส้ม ทำ Black orange coffee"},
+    {"time_index":158,"node_index":30,"foci_index":6,"desc":"พักเบรค กินแซนวิช"},
+    {"time_index":161,"node_index":16,"foci_index":8,"desc":"ทำงาน"},
+    {"time_index":166,"node_index":2,"foci_index":8,"desc":"ทำงาน"},
+    {"time_index":166,"node_index":11,"foci_index":10,"desc":"meeting team (update sprint plan)"},
+    {"time_index":166,"node_index":15,"foci_index":8,"desc":"เข้าไลน์การผลิต เพื่อดูเครื่องจักร"},
+    {"time_index":166,"node_index":21,"foci_index":8,"desc":"ทำงาน"},
+    {"time_index":166,"node_index":22,"foci_index":8,"desc":"Solve and sourcing"},
+    {"time_index":166,"node_index":24,"foci_index":8,"desc":"ทำงาน(ต่อ)"},
+    {"time_index":166,"node_index":29,"foci_index":8,"desc":"เดินไปดูสภาพการทำงานของเครื่องจักร"},
+    {"time_index":170,"node_index":13,"foci_index":8,"desc":"ทำงานที่ได้รับมอบหมาย"},
+    {"time_index":173,"node_index":7,"foci_index":6,"desc":"กินข้าวเที่ยง"},
+    {"time_index":173,"node_index":8,"foci_index":10,"desc":"ประชุมเลิก กลับมาที่โต๊ะทำงาน"},
+    {"time_index":173,"node_index":20,"foci_index":6,"desc":"Lunch time"},
+    {"time_index":173,"node_index":29,"foci_index":6,"desc":"พักเที่ยงกินข้าว"},
+    {"time_index":176,"node_index":8,"foci_index":6,"desc":"ออกไปทานข้าวกลางวัน"},
+    {"time_index":176,"node_index":32,"foci_index":6,"desc":"สั่งข้าวกลางวัน"},
+    {"time_index":177,"node_index":21,"foci_index":6,"desc":"ออกไปทานข้าวเที่ยง"},
+    {"time_index":181,"node_index":3,"foci_index":6,"desc":"พักเที่ยง"},
+    {"time_index":181,"node_index":4,"foci_index":6,"desc":"ทานข้าวเที่ยง"},
+    {"time_index":181,"node_index":5,"foci_index":6,"desc":"ไปกินข้าวที่ foodcourt"},
+    {"time_index":181,"node_index":6,"foci_index":6,"desc":"ออกไปกินข้าว"},
+    {"time_index":181,"node_index":10,"foci_index":6,"desc":"กินข้างเที่ยง"},
+    {"time_index":181,"node_index":11,"foci_index":6,"desc":"เปิดตู้เย็น (หาอาหารทาน) พักเที่ยง"},
+    {"time_index":181,"node_index":12,"foci_index":6,"desc":"Have lunch"},
+    {"time_index":181,"node_index":13,"foci_index":6,"desc":"กินต้มยำทะเลไข่เจียวกับข้าวเปล่า"},
+    {"time_index":181,"node_index":14,"foci_index":7,"desc":"เลิกเรียน"},
+    {"time_index":181,"node_index":15,"foci_index":6,"desc":"กินข้าวกลางวันที่โรงอาหาร"},
+    {"time_index":181,"node_index":17,"foci_index":6,"desc":"รับประทานอาหารกลางวัน"},
+    {"time_index":181,"node_index":18,"foci_index":6,"desc":"ออกไปกินข้าวใต้คอนโด"},
+    {"time_index":181,"node_index":19,"foci_index":6,"desc":"กินข้าวเที่ยง"},
+    {"time_index":181,"node_index":20,"foci_index":1,"desc":"Play ROV with friend"},
+    {"time_index":181,"node_index":21,"foci_index":6,"desc":"กินอาหารกลางวัน"},
+    {"time_index":181,"node_index":22,"foci_index":6,"desc":"Lunch"},
+    {"time_index":181,"node_index":23,"foci_index":6,"desc":"สั่งอาหารเที่ยงผ่าน Food panda"},
+    {"time_index":181,"node_index":24,"foci_index":6,"desc":"ทำกับข้าว"},
+    {"time_index":181,"node_index":25,"foci_index":6,"desc":"Lunch time"},
+    {"time_index":181,"node_index":26,"foci_index":6,"desc":"ออกไป ทานข้าวที่ cosmo bazaar"},
+    {"time_index":181,"node_index":27,"foci_index":6,"desc":"ทานข้าวเที่ยง"},
+    {"time_index":181,"node_index":28,"foci_index":6,"desc":"Lunch"},
+    {"time_index":181,"node_index":29,"foci_index":6,"desc":"ไปร้านกาแฟ กินกาแฟ"},
+    {"time_index":181,"node_index":30,"foci_index":6,"desc":"กินอาหารกลางวัน"},
+    {"time_index":181,"node_index":31,"foci_index":7,"desc":"Do homework"},
+    {"time_index":183,"node_index":14,"foci_index":6,"desc":"ออกไปหาอะไรกิน"},
+    {"time_index":183,"node_index":32,"foci_index":6,"desc":"ลงไปซื้อกาแฟ"},
+    {"time_index":184,"node_index":29,"foci_index":8,"desc":"พูดคุยตามอัธยาศัยกับทีมงาน"},
+    {"time_index":187,"node_index":13,"foci_index":8,"desc":"คุยแลกเปลี่ยนกับคนในทีม"},
+    {"time_index":188,"node_index":7,"foci_index":6,"desc":"ไปร้านกาแฟ"},
+    {"time_index":188,"node_index":11,"foci_index":6,"desc":"ออกไปสั่งอาหารตามสั่ง"},
+    {"time_index":188,"node_index":15,"foci_index":8,"desc":"นั่งคุยกับเพื่อนร่วมงาน"},
+    {"time_index":188,"node_index":17,"foci_index":0,"desc":"แอบงีบ"},
+    {"time_index":188,"node_index":19,"foci_index":8,"desc":"กลับมาทำงาน(ต่อ)"},
+    {"time_index":188,"node_index":20,"foci_index":8,"desc":"Continue working"},
+    {"time_index":188,"node_index":21,"foci_index":6,"desc":"กลับเข้ามาโรงงาน"},
+    {"time_index":188,"node_index":24,"foci_index":6,"desc":"กินข้าวกลางวัน"},
+    {"time_index":188,"node_index":29,"foci_index":8,"desc":"หมดเวลาพัก กลับไปทำงานต่อ"},
+    {"time_index":188,"node_index":31,"foci_index":6,"desc":"Have lunch at baan somtum"},
+    {"time_index":191,"node_index":5,"foci_index":6,"desc":"ไปเซเว่น ซื้อน้ำยันฮี "},
+    {"time_index":191,"node_index":14,"foci_index":5,"desc":"อาบน้ำ"},
+    {"time_index":191,"node_index":21,"foci_index":2,"desc":"นั่งสมาธิ"},
+    {"time_index":192,"node_index":3,"foci_index":0,"desc":"งีบ"},
+    {"time_index":193,"node_index":13,"foci_index":6,"desc":"ซื้อกาแฟ"},
+    {"time_index":193,"node_index":14,"foci_index":6,"desc":"กินข้าว"},
+    {"time_index":193,"node_index":24,"foci_index":9,"desc":"ล้างจาน"},
+    {"time_index":196,"node_index":0,"foci_index":6,"desc":"กินอาหาเที่ยง"},
+    {"time_index":196,"node_index":2,"foci_index":6,"desc":"ทานมื้อเที่ยง"},
+    {"time_index":196,"node_index":3,"foci_index":8,"desc":"ช่วยลูกน้องเรียงงาน"},
+    {"time_index":196,"node_index":5,"foci_index":8,"desc":"ทำงาน"},
+    {"time_index":196,"node_index":6,"foci_index":6,"desc":"ไปร้านชาไข่มุก"},
+    {"time_index":196,"node_index":7,"foci_index":8,"desc":"กลับมาทำงาน"},
+    {"time_index":196,"node_index":9,"foci_index":6,"desc":"สั่งข้าวผ่าน Line man"},
+    {"time_index":196,"node_index":10,"foci_index":8,"desc":"เริ่มทำงาน"},
+    {"time_index":196,"node_index":12,"foci_index":8,"desc":"Continue working"},
+    {"time_index":196,"node_index":13,"foci_index":8,"desc":"เริ่มทำงานรอบบ่าย"},
+    {"time_index":196,"node_index":14,"foci_index":7,"desc":"เริ่มเรียน"},
+    {"time_index":196,"node_index":15,"foci_index":5,"desc":"เข้าห้องน้ำ แปรงฟัน"},
+    {"time_index":196,"node_index":16,"foci_index":8,"desc":"ทำงาน"},
+    {"time_index":196,"node_index":17,"foci_index":8,"desc":"เริ่มงานช่วงบ่าย เปิด PO"},
+    {"time_index":196,"node_index":21,"foci_index":8,"desc":"ทำงาน"},
+    {"time_index":196,"node_index":21,"foci_index":6,"desc":"ซื้อชาไข่มุก"},
+    {"time_index":196,"node_index":22,"foci_index":8,"desc":"Follow up partners"},
+    {"time_index":196,"node_index":24,"foci_index":8,"desc":"เริ่มงานช่วงบ่าย"},
+    {"time_index":196,"node_index":25,"foci_index":12,"desc":"go shopping"},
+    {"time_index":196,"node_index":26,"foci_index":8,"desc":"ไปนั่งทำงานช่วงบ่ายที่ Co-Working Space"},
+    {"time_index":196,"node_index":27,"foci_index":7,"desc":"เรียนวิชาสอง พร้อมกับทำการบ้านวิชาอื่น"},
+    {"time_index":196,"node_index":28,"foci_index":8,"desc":"Team work in progress conference"},
+    {"time_index":196,"node_index":29,"foci_index":6,"desc":"เดินไปซื้อน้ำหวานมากิน"},
+    {"time_index":196,"node_index":30,"foci_index":8,"desc":"เข้างานช่วงบ่าย"},
+    {"time_index":196,"node_index":32,"foci_index":8,"desc":"ทำงาน"},
+    {"time_index":196,"node_index":21,"foci_index":7,"desc":"Make homework"},
+    {"time_index":198,"node_index":9,"foci_index":2,"desc":"เช็ค Facebook Instragram"},
+    {"time_index":198,"node_index":15,"foci_index":10,"desc":"เตรียมข้อมูลไปประชุมกับลูกค้า"},
+    {"time_index":199,"node_index":8,"foci_index":8,"desc":"ทำงาน"},
+    {"time_index":199,"node_index":21,"foci_index":8,"desc":"ทำงาน"},
+    {"time_index":199,"node_index":29,"foci_index":8,"desc":"ทำงานต่อ"},
+    {"time_index":203,"node_index":4,"foci_index":8,"desc":"ทำงาน "},
+    {"time_index":203,"node_index":6,"foci_index":8,"desc":"กลับเข้ามาทำงาน"},
+    {"time_index":203,"node_index":21,"foci_index":6,"desc":"ดื่มกาแฟที่แม่บ้านชงให้"},
+    {"time_index":203,"node_index":26,"foci_index":10,"desc":"ประชุมผ่าน MS Team"},
+    {"time_index":206,"node_index":9,"foci_index":6,"desc":"กินข้าว"},
+    {"time_index":207,"node_index":0,"foci_index":6,"desc":"กินกาแฟ"},
+    {"time_index":208,"node_index":15,"foci_index":10,"desc":"เดินไปห้องประชุม"},
+    {"time_index":211,"node_index":0,"foci_index":8,"desc":"เริ่มทำงานช่วงบ่าย"},
+    {"time_index":211,"node_index":1,"foci_index":6,"desc":"กินข้าวเที่ยง"},
+    {"time_index":211,"node_index":2,"foci_index":8,"desc":"ทำงาน"},
+    {"time_index":211,"node_index":3,"foci_index":8,"desc":"ตรวจสอบงานขาเข้า"},
+    {"time_index":211,"node_index":6,"foci_index":5,"desc":"จังหวะปวดฉี่"},
+    {"time_index":211,"node_index":8,"foci_index":10,"desc":"ประชุมกับหน่วยาน"},
+    {"time_index":211,"node_index":11,"foci_index":8,"desc":"เคลียร์งาน"},
+    {"time_index":211,"node_index":12,"foci_index":6,"desc":"Brew coffee"},
+    {"time_index":211,"node_index":15,"foci_index":10,"desc":"ประชุมกับลูกค้า"},
+    {"time_index":211,"node_index":16,"foci_index":6,"desc":"กินข้าวเที่ยง"},
+    {"time_index":211,"node_index":17,"foci_index":6,"desc":"สั่งกาแฟแก้วที่ 2 ผ่าน Grab Food"},
+    {"time_index":211,"node_index":18,"foci_index":8,"desc":"ทำงาน Work from home"},
+    {"time_index":211,"node_index":22,"foci_index":10,"desc":"Coordinate meeting"},
+    {"time_index":211,"node_index":29,"foci_index":8,"desc":"ติดตามสถานะงานของวันนี้ ตามแผนที่ได้วางไว้"},
+    {"time_index":211,"node_index":31,"foci_index":6,"desc":"Try coffee at Horme café"},
+    {"time_index":211,"node_index":21,"foci_index":4,"desc":"Travel to Laksi condo"},
+    {"time_index":212,"node_index":6,"foci_index":8,"desc":"ทำงานต่อ"},
+    {"time_index":213,"node_index":31,"foci_index":2,"desc":"Online horoscope"},
+    {"time_index":218,"node_index":1,"foci_index":6,"desc":"ซื้อของกินเล่นเพิ่มเติม"},
+    {"time_index":218,"node_index":6,"foci_index":7,"desc":"เปิด Streaming ดูหุ้นไทย"},
+    {"time_index":218,"node_index":9,"foci_index":12,"desc":"ออกไปซื้อของทำขนม"},
+    {"time_index":218,"node_index":19,"foci_index":6,"desc":"เติมกาแฟ"},
+    {"time_index":220,"node_index":6,"foci_index":8,"desc":"ทำงานต่อ"},
+    {"time_index":222,"node_index":21,"foci_index":6,"desc":"Take a lunch"},
+    {"time_index":226,"node_index":1,"foci_index":8,"desc":"เรื่มงานบ่าย"},
+    {"time_index":226,"node_index":2,"foci_index":10,"desc":"Meeting"},
+    {"time_index":226,"node_index":5,"foci_index":8,"desc":"ฟังหัวหน้าบรีฟงาน"},
+    {"time_index":226,"node_index":8,"foci_index":6,"desc":"จิบกาแฟยามบ่าย"},
+    {"time_index":226,"node_index":11,"foci_index":10,"desc":"meeting  (with with  marketing team)"},
+    {"time_index":226,"node_index":12,"foci_index":0,"desc":"Feel sleepy"},
+    {"time_index":226,"node_index":13,"foci_index":10,"desc":"ประชุม"},
+    {"time_index":226,"node_index":15,"foci_index":10,"desc":"ประชุมกับทีมงาน New product"},
+    {"time_index":226,"node_index":17,"foci_index":8,"desc":"ติดต่อแผนกบัญชีรับเงิน"},
+    {"time_index":226,"node_index":21,"foci_index":6,"desc":"รับประทานอาหารว่าง"},
+    {"time_index":226,"node_index":25,"foci_index":4,"desc":"arrive home"},
+    {"time_index":226,"node_index":26,"foci_index":6,"desc":"สั่งน้ำ ขนมของร้านมานั่งกินระหว่างทำงาน"},
+    {"time_index":226,"node_index":28,"foci_index":8,"desc":"Working on presentation"},
+    {"time_index":226,"node_index":29,"foci_index":8,"desc":"สรุปผลสถานะการทำงานของวันนี้ ว่าตามแผนหรือไม่"},
+    {"time_index":230,"node_index":0,"foci_index":10,"desc":"ประชุมทีมย่อย"},
+    {"time_index":230,"node_index":8,"foci_index":8,"desc":"ทำงาน"},
+    {"time_index":230,"node_index":21,"foci_index":6,"desc":"Pick up order"},
+    {"time_index":230,"node_index":25,"foci_index":2,"desc":"Watch Netflix"},
+    {"time_index":233,"node_index":8,"foci_index":10,"desc":"ประชุม"},
+    {"time_index":233,"node_index":21,"foci_index":6,"desc":"ชงกาแฟ"},
+    {"time_index":237,"node_index":0,"foci_index":10,"desc":"ประชุมทีมใหญ่"},
+    {"time_index":237,"node_index":21,"foci_index":8,"desc":"ทำงานต่อ"},
+    {"time_index":237,"node_index":24,"foci_index":8,"desc":"ส่งงานเจ้านายครบตามกำหนด"},
+    {"time_index":237,"node_index":21,"foci_index":4,"desc":"Travel to Home"},
+    {"time_index":240,"node_index":2,"foci_index":8,"desc":"ทำงาน"},
+    {"time_index":240,"node_index":5,"foci_index":8,"desc":"ทำงานต่อ"},
+    {"time_index":240,"node_index":9,"foci_index":8,"desc":"ทำขนม"},
+    {"time_index":240,"node_index":14,"foci_index":7,"desc":"เรียนเสร็จแล้ว"},
+    {"time_index":240,"node_index":15,"foci_index":4,"desc":"เดินกลับออฟฟิต"},
+    {"time_index":240,"node_index":17,"foci_index":8,"desc":"ไปห้อง MD เซ็นต์เอกสาร"},
+    {"time_index":240,"node_index":24,"foci_index":8,"desc":"หาข้อมูลต้นไม้ เตรียมเปิดเพจ เฌอ'ตอม"},
+    {"time_index":240,"node_index":27,"foci_index":2,"desc":"เล่นมือถือ Facebook, Instagram, Shopee"},
+    {"time_index":240,"node_index":29,"foci_index":4,"desc":"เลิกงาน เดินทางกลับบ้าน"},
+    {"time_index":241,"node_index":14,"foci_index":6,"desc":"เปิด LINE MAN หาของกินแล้วก็ปิดไป"},
+    {"time_index":241,"node_index":21,"foci_index":8,"desc":"ทำงาน"},
+    {"time_index":241,"node_index":21,"foci_index":2,"desc":"Take a rest"},
+    {"time_index":244,"node_index":15,"foci_index":6,"desc":"พักกินขนม"},
+    {"time_index":247,"node_index":15,"foci_index":10,"desc":"ทำงานสรุปรีพอตการประชุม"},
+    {"time_index":248,"node_index":6,"foci_index":4,"desc":"ขับรถออกจากที่ทำงาน"},
+    {"time_index":248,"node_index":8,"foci_index":8,"desc":"ทำงาน"},
+    {"time_index":248,"node_index":13,"foci_index":8,"desc":"ทำงานต่อ"},
+    {"time_index":248,"node_index":23,"foci_index":4,"desc":"เลิกงาน เดินกลับห้อง"},
+    {"time_index":249,"node_index":14,"foci_index":7,"desc":"สอนเพื่อนทำการบ้าน"},
+    {"time_index":251,"node_index":29,"foci_index":2,"desc":"ถึงบ้าน นั่งพักผ่อนดูทีวี"},
+    {"time_index":255,"node_index":3,"foci_index":2,"desc":"พักเบรค"},
+    {"time_index":255,"node_index":6,"foci_index":11,"desc":"ถึงบ้าน ไปให้อาหารนกแก้ว"},
+    {"time_index":255,"node_index":7,"foci_index":6,"desc":"เลิกงาน นั่งรอเพื่อนไปกินข้าวเย็นด้วยกัน"},
+    {"time_index":255,"node_index":11,"foci_index":6,"desc":"order food delivery (grab food)"},
+    {"time_index":255,"node_index":15,"foci_index":8,"desc":"เข้าไลน์การผลิต เพื่อเทสตัวงานให้ลูกค้า"},
+    {"time_index":255,"node_index":17,"foci_index":8,"desc":"เลิกงานกลับบ้าน"},
+    {"time_index":255,"node_index":20,"foci_index":8,"desc":"Finish working"},
+    {"time_index":255,"node_index":21,"foci_index":10,"desc":"ประชุม"},
+    {"time_index":255,"node_index":22,"foci_index":8,"desc":"Clear office tasks"},
+    {"time_index":255,"node_index":23,"foci_index":6,"desc":"แวะซื้อของกินที่ 7-11"},
+    {"time_index":255,"node_index":24,"foci_index":6,"desc":"กินข้าวเย็น"},
+    {"time_index":255,"node_index":31,"foci_index":3,"desc":"Suanluang Park"},
+    {"time_index":255,"node_index":32,"foci_index":10,"desc":"ประชุมสรุปเคสประจำวัน"},
+    {"time_index":256,"node_index":21,"foci_index":4,"desc":"ขับรถกลับบ้าน"},
+    {"time_index":256,"node_index":21,"foci_index":3,"desc":"Play football"},
+    {"time_index":259,"node_index":8,"foci_index":8,"desc":"คุยกับเพื่อนร่วมงาน เย็นนี้ไปร้านไหนดี"},
+    {"time_index":260,"node_index":21,"foci_index":8,"desc":"ทำงาน"},
+    {"time_index":260,"node_index":24,"foci_index":2,"desc":"เดินดูต้นไม้+ถ่ายรูป"},
+    {"time_index":263,"node_index":2,"foci_index":12,"desc":"Shopping"},
+    {"time_index":263,"node_index":3,"foci_index":8,"desc":"มาเรียงงานที่เหลือ"},
+    {"time_index":263,"node_index":6,"foci_index":6,"desc":"ออกไปกินข้าว"},
+    {"time_index":263,"node_index":14,"foci_index":6,"desc":"อยากนอน แต่ออกไปหาข้าวกิน"},
+    {"time_index":263,"node_index":18,"foci_index":6,"desc":"เดินออกไปซื้อชานมไข่มุกที่ Big C"},
+    {"time_index":263,"node_index":20,"foci_index":4,"desc":"Take the van to home"},
+    {"time_index":263,"node_index":21,"foci_index":4,"desc":"เดินทางไปเล่นฟิตเนส"},
+    {"time_index":263,"node_index":26,"foci_index":6,"desc":"ไปซื้อข้าวเย็นที่ cosmo bazaar เพื่อเอากลับไปกินที่บ้าน"},
+    {"time_index":263,"node_index":27,"foci_index":6,"desc":"ทานอาหารเย็น เล่นมือถือขณะทานอาหาร"},
+    {"time_index":263,"node_index":29,"foci_index":8,"desc":"เปิดคอมพิวเตอร์"},
+    {"time_index":263,"node_index":31,"foci_index":3,"desc":"Go to Decathlon"},
+    {"time_index":265,"node_index":29,"foci_index":2,"desc":"เล่นอินเตอร์เน็ต อ่านบทความออนไลน์"},
+    {"time_index":268,"node_index":30,"foci_index":8,"desc":"เตรียมตัวกลับบ้าน"},
+    {"time_index":269,"node_index":30,"foci_index":10,"desc":"หัวหน้าเรียกประชุม"},
+    {"time_index":270,"node_index":5,"foci_index":4,"desc":"ขึ้น mrt ไป korea town"},
+    {"time_index":270,"node_index":7,"foci_index":4,"desc":"ขับรถกลับ"},
+    {"time_index":270,"node_index":8,"foci_index":6,"desc":"ทานอาหารเย็นกับเพื่อน"},
+    {"time_index":270,"node_index":10,"foci_index":4,"desc":"เลิกงาน"},
+    {"time_index":270,"node_index":11,"foci_index":3,"desc":"ออกกำลังกาย"},
+    {"time_index":270,"node_index":12,"foci_index":8,"desc":"Finish working"},
+    {"time_index":270,"node_index":17,"foci_index":12,"desc":"ซื้อของทำกับข้าว"},
+    {"time_index":270,"node_index":18,"foci_index":6,"desc":"กิน MK"},
+    {"time_index":270,"node_index":19,"foci_index":4,"desc":"เลิกงาน"},
+    {"time_index":270,"node_index":21,"foci_index":8,"desc":"ทำงาน"},
+    {"time_index":270,"node_index":21,"foci_index":3,"desc":"เล่นฟิตเนส"},
+    {"time_index":270,"node_index":21,"foci_index":11,"desc":"ฝึกสุนัข"},
+    {"time_index":270,"node_index":22,"foci_index":11,"desc":"Play with children"},
+    {"time_index":270,"node_index":24,"foci_index":11,"desc":"นั่งพูดคุยกับญาติผู้ใหญ่+เล่นกับหมา"},
+    {"time_index":270,"node_index":25,"foci_index":6,"desc":"Dinner "},
+    {"time_index":270,"node_index":32,"foci_index":4,"desc":"ออกจากที่ทำงาน"},
+    {"time_index":273,"node_index":19,"foci_index":4,"desc":"ขับรถกลับบ้าน"},
+    {"time_index":273,"node_index":31,"foci_index":6,"desc":"Have dinner at Nice Two Meet You"},
+    {"time_index":274,"node_index":13,"foci_index":4,"desc":"ขึ้นบีทีเอสกลับคอนโด"},
+    {"time_index":274,"node_index":21,"foci_index":11,"desc":"ให้อาหารสุนัข"},
+    {"time_index":276,"node_index":15,"foci_index":4,"desc":"เตรียมตัวกลับบ้าน"},
+    {"time_index":278,"node_index":2,"foci_index":6,"desc":"ทานมื้อเย็น"},
+    {"time_index":278,"node_index":5,"foci_index":6,"desc":"กินหมูย่างเกาหลีกับเพื่อน"},
+    {"time_index":278,"node_index":6,"foci_index":2,"desc":"กลับมานอนเล่นโทรศัพท์บนเตียง"},
+    {"time_index":278,"node_index":7,"foci_index":6,"desc":"กินข้าวเย็น"},
+    {"time_index":278,"node_index":8,"foci_index":6,"desc":"จิบไวน์"},
+    {"time_index":278,"node_index":10,"foci_index":6,"desc":"กินข้าวเย็น"},
+    {"time_index":278,"node_index":15,"foci_index":4,"desc":"ขึ้นรถตู้บริษัท"},
+    {"time_index":278,"node_index":21,"foci_index":3,"desc":"วิ่ง"},
+    {"time_index":278,"node_index":23,"foci_index":3,"desc":"ออกกำลังกาย ตามคลิปที่ห้อง"},
+    {"time_index":278,"node_index":25,"foci_index":11,"desc":"Family time"},
+    {"time_index":278,"node_index":26,"foci_index":6,"desc":"รับประทานอาหารเย็นพร้อมกันในครอบครัว"},
+    {"time_index":278,"node_index":29,"foci_index":6,"desc":"กินข้าวเย็น"},
+    {"time_index":278,"node_index":30,"foci_index":8,"desc":"เตรียมตัวกลับบ้าน"},
+    {"time_index":278,"node_index":32,"foci_index":6,"desc":"ไปกินข้าวที่ สวนหลวงสแควร์กับเพื่อน"},
+    {"time_index":280,"node_index":14,"foci_index":0,"desc":"น็อก"},
+    {"time_index":280,"node_index":27,"foci_index":2,"desc":"ทำการบ้าน และเล่นมือถือ"},
+    {"time_index":280,"node_index":30,"foci_index":4,"desc":"ขับรถกลับบ้าน"},
+    {"time_index":285,"node_index":1,"foci_index":8,"desc":"เลิกงาน"},
+    {"time_index":285,"node_index":2,"foci_index":8,"desc":"ทำงาน"},
+    {"time_index":285,"node_index":12,"foci_index":6,"desc":"Have dinner"},
+    {"time_index":285,"node_index":13,"foci_index":12,"desc":"ซื้ออาหารที่ตลาดนัดเมเจอร์"},
+    {"time_index":285,"node_index":17,"foci_index":6,"desc":"ทำอาหารเย็น"},
+    {"time_index":285,"node_index":18,"foci_index":12,"desc":"เดินไปซื้อของใช้ใน Big C"},
+    {"time_index":285,"node_index":19,"foci_index":6,"desc":"กินข้าวเย็น"},
+    {"time_index":285,"node_index":20,"foci_index":4,"desc":"Arrive at home"},
+    {"time_index":285,"node_index":21,"foci_index":3,"desc":"วิ่งสวนสาธารณะ"},
+    {"time_index":285,"node_index":21,"foci_index":4,"desc":"เดินทางไปทานข้าวเย็น"},
+    {"time_index":285,"node_index":22,"foci_index":6,"desc":"Dinner"},
+    {"time_index":285,"node_index":24,"foci_index":3,"desc":"ออกกำลังกายแบบ Weight Trainning"},
+    {"time_index":285,"node_index":28,"foci_index":6,"desc":"Dinner"},
+    {"time_index":285,"node_index":29,"foci_index":7,"desc":"ทำการบ้าน ป.โท"},
+    {"time_index":285,"node_index":21,"foci_index":6,"desc":"กินข้าวเย็น"},
+    {"time_index":289,"node_index":0,"foci_index":10,"desc":"ประชุมสรุปงานประจำวัน"},
+    {"time_index":289,"node_index":10,"foci_index":4,"desc":"เดินทางกลับถึงบ้าน"},
+    {"time_index":289,"node_index":20,"foci_index":5,"desc":"Take a shower"},
+    {"time_index":290,"node_index":13,"foci_index":3,"desc":"เปลี่ยนชุดออกกำลังกายที่คอนโด"},
+    {"time_index":293,"node_index":0,"foci_index":8,"desc":"เลิกงาน"},
+    {"time_index":293,"node_index":0,"foci_index":4,"desc":"เดินทางด้วย BTS กลับบ้าน"},
+    {"time_index":293,"node_index":1,"foci_index":6,"desc":"กินข้าวเย็น"},
+    {"time_index":293,"node_index":3,"foci_index":8,"desc":"เลิกงาน สแกนนิ้ว"},
+    {"time_index":293,"node_index":4,"foci_index":4,"desc":"เดินทางกลับบ้าน"},
+    {"time_index":293,"node_index":6,"foci_index":8,"desc":"เปิดคอมทำงาน เล่นเน็ต"},
+    {"time_index":293,"node_index":7,"foci_index":4,"desc":"ขับรถกลับ"},
+    {"time_index":293,"node_index":10,"foci_index":5,"desc":"แปรงฟันและอาบน้ำ"},
+    {"time_index":293,"node_index":11,"foci_index":6,"desc":"กินข้าวเย็น"},
+    {"time_index":293,"node_index":13,"foci_index":3,"desc":"วิ่งรอบคอนโด"},
+    {"time_index":293,"node_index":18,"foci_index":4,"desc":"เดินกลับคอนโด"},
+    {"time_index":293,"node_index":19,"foci_index":2,"desc":"ดู Netflix"},
+    {"time_index":293,"node_index":20,"foci_index":6,"desc":"Dinner"},
+    {"time_index":293,"node_index":21,"foci_index":6,"desc":"ทานส้มตำ"},
+    {"time_index":293,"node_index":22,"foci_index":2,"desc":"Watch & Listen"},
+    {"time_index":293,"node_index":26,"foci_index":8,"desc":"เล่น Facebook"},
+    {"time_index":293,"node_index":29,"foci_index":5,"desc":"อาบน้ำ"},
+    {"time_index":293,"node_index":30,"foci_index":2,"desc":"ถึงบ้าน"},
+    {"time_index":293,"node_index":32,"foci_index":6,"desc":"กินของหวานต่อ"},
+    {"time_index":293,"node_index":21,"foci_index":5,"desc":"Take a shower"},
+    {"time_index":296,"node_index":7,"foci_index":5,"desc":"ถึงบ้าน เก็บของ อาบน้ำ"},
+    {"time_index":298,"node_index":3,"foci_index":2,"desc":"ถึงห้อง"},
+    {"time_index":298,"node_index":15,"foci_index":4,"desc":"ลงจากรถตู้"},
+    {"time_index":300,"node_index":0,"foci_index":6,"desc":"กินอาหารเย็น"},
+    {"time_index":300,"node_index":1,"foci_index":4,"desc":"เดินทางกลับบ้าน"},
+    {"time_index":300,"node_index":5,"foci_index":6,"desc":"ไปร้านบิงซู แต่ร้านให้นั่งแค่โต๊ะละ 2 คน เลยไม่กิน"},
+    {"time_index":300,"node_index":8,"foci_index":4,"desc":"ถึงบ้าน"},
+    {"time_index":300,"node_index":9,"foci_index":6,"desc":"กินมื้อเย็น โปรตีนเวย์"},
+    {"time_index":300,"node_index":10,"foci_index":2,"desc":"ดูสื่อบันเทิงออนไลน์"},
+    {"time_index":300,"node_index":11,"foci_index":1,"desc":"เล่นเกมส์ Among Us"},
+    {"time_index":300,"node_index":12,"foci_index":7,"desc":"Learn E-learning"},
+    {"time_index":300,"node_index":13,"foci_index":6,"desc":"กินข้าวบนห้อง"},
+    {"time_index":300,"node_index":15,"foci_index":6,"desc":"แวะกินข้าว"},
+    {"time_index":300,"node_index":17,"foci_index":6,"desc":"รับประทานอาหารเย็น"},
+    {"time_index":300,"node_index":18,"foci_index":0,"desc":"นอน"},
+    {"time_index":300,"node_index":20,"foci_index":1,"desc":"Play ROV with friend"},
+    {"time_index":300,"node_index":21,"foci_index":4,"desc":"เดินทางกลับบ้าน"},
+    {"time_index":300,"node_index":23,"foci_index":5,"desc":"อาบน้ำ"},
+    {"time_index":300,"node_index":25,"foci_index":7,"desc":"Read Textbook"},
+    {"time_index":300,"node_index":28,"foci_index":5,"desc":"Shower"},
+    {"time_index":300,"node_index":29,"foci_index":7,"desc":"ทำการบ้าน ป.โท ต่อ"},
+    {"time_index":300,"node_index":30,"foci_index":6,"desc":"กินอาหารเย็น"},
+    {"time_index":300,"node_index":31,"foci_index":4,"desc":"Wait bus to come back"},
+    {"time_index":300,"node_index":21,"foci_index":3,"desc":"ออกกำลังกาย"},
+    {"time_index":300,"node_index":21,"foci_index":12,"desc":"Buy a beer"},
+    {"time_index":303,"node_index":9,"foci_index":5,"desc":"อาบน้ำ"},
+    {"time_index":304,"node_index":7,"foci_index":2,"desc":"เล่นโทรศัพท์มือถือ เล่น Facebook อ่านหนังสือการ์ตูน"},
+    {"time_index":304,"node_index":24,"foci_index":7,"desc":"ท่องโลกอิเตอร์เน็ต ดูหนัง ฟังเพลง เช็ค social"},
+    {"time_index":305,"node_index":23,"foci_index":6,"desc":"เดินไปที่ตู้เย็น หานมดื่ม"},
+    {"time_index":308,"node_index":1,"foci_index":2,"desc":"ดู Netflix"},
+    {"time_index":308,"node_index":4,"foci_index":6,"desc":"ทานข้าวเย็น"},
+    {"time_index":308,"node_index":5,"foci_index":4,"desc":"ขึ้น mrt กลับคอนโด"},
+    {"time_index":308,"node_index":8,"foci_index":5,"desc":"อาบน้ำ"},
+    {"time_index":308,"node_index":9,"foci_index":11,"desc":"พูดคุยกับที่บ้าน"},
+    {"time_index":308,"node_index":13,"foci_index":7,"desc":"ทำการบ้านปริญญาโท"},
+    {"time_index":308,"node_index":14,"foci_index":7,"desc":"ตื่นมาคุยการบ้าน"},
+    {"time_index":308,"node_index":15,"foci_index":4,"desc":"นั่งแท๊กซี่กลับบ้าน"},
+    {"time_index":308,"node_index":21,"foci_index":4,"desc":"ขึ้นรถกลับบ้าน"},
+    {"time_index":308,"node_index":22,"foci_index":5,"desc":"Bathing"},
+    {"time_index":308,"node_index":23,"foci_index":2,"desc":"เล่น social หาเพลงที่ชอบฟัง"},
+    {"time_index":308,"node_index":32,"foci_index":4,"desc":"ขับรถกลับบ้าน"},
+    {"time_index":308,"node_index":21,"foci_index":9,"desc":"Prepare glasses, food"},
+    {"time_index":310,"node_index":21,"foci_index":5,"desc":"อาบน้ำ"},
+    {"time_index":311,"node_index":8,"foci_index":8,"desc":"อ่านหนังสือ ทำงานนอก"},
+    {"time_index":315,"node_index":0,"foci_index":5,"desc":"อาบน้ำ"},
+    {"time_index":315,"node_index":2,"foci_index":5,"desc":"อาบน้ำ"},
+    {"time_index":315,"node_index":3,"foci_index":5,"desc":"อาบน้ำ"},
+    {"time_index":315,"node_index":4,"foci_index":5,"desc":"แปรงฟัน/ อาบน้ำ"},
+    {"time_index":315,"node_index":6,"foci_index":5,"desc":"อาบน้ำ + แปรงฟัน"},
+    {"time_index":315,"node_index":11,"foci_index":5,"desc":"อาบน้ำ"},
+    {"time_index":315,"node_index":16,"foci_index":4,"desc":"กลับบ้าน"},
+    {"time_index":315,"node_index":17,"foci_index":5,"desc":"อาบน้ำ"},
+    {"time_index":315,"node_index":18,"foci_index":7,"desc":"ตื่นมาทำการบ้าน"},
+    {"time_index":315,"node_index":19,"foci_index":1,"desc":"เล่นเกม"},
+    {"time_index":315,"node_index":20,"foci_index":2,"desc":"Watch netfix"},
+    {"time_index":315,"node_index":21,"foci_index":7,"desc":"อ่านหนังสือ + ทำการบ้าน"},
+    {"time_index":315,"node_index":21,"foci_index":5,"desc":"อาบน้ำ"},
+    {"time_index":315,"node_index":22,"foci_index":7,"desc":"Read a book"},
+    {"time_index":315,"node_index":26,"foci_index":5,"desc":"อาบน้ำ"},
+    {"time_index":315,"node_index":28,"foci_index":2,"desc":"Talking to flings"},
+    {"time_index":315,"node_index":29,"foci_index":6,"desc":"หาขนม ของหวานมากิน"},
+    {"time_index":315,"node_index":30,"foci_index":2,"desc":"นอนเล่นมือถือ"},
+    {"time_index":315,"node_index":31,"foci_index":2,"desc":"Watch The Wall Song tv programme"},
+    {"time_index":315,"node_index":21,"foci_index":2,"desc":"Watch football match spur vs Sheffield"},
+    {"time_index":318,"node_index":15,"foci_index":4,"desc":"ถึงบ้าน"},
+    {"time_index":319,"node_index":32,"foci_index":4,"desc":"ถึงบ้าน"},
+    {"time_index":320,"node_index":5,"foci_index":4,"desc":"ถึงคอนโด"},
+    {"time_index":320,"node_index":5,"foci_index":11,"desc":"นั่งเม้าท์กับน้อง"},
+    {"time_index":320,"node_index":21,"foci_index":4,"desc":"ลงรถไฟฟ้า"},
+    {"time_index":320,"node_index":32,"foci_index":5,"desc":"อาบน้ำ"},
+    {"time_index":321,"node_index":15,"foci_index":5,"desc":"อาบน้ำ"},
+    {"time_index":322,"node_index":0,"foci_index":7,"desc":"เล่นอินเตอร์เน็ท"},
+    {"time_index":322,"node_index":1,"foci_index":5,"desc":"อาบน้ำ"},
+    {"time_index":322,"node_index":2,"foci_index":1,"desc":"เล่นเกมส์"},
+    {"time_index":322,"node_index":3,"foci_index":7,"desc":"ทำการบ้าน"},
+    {"time_index":322,"node_index":4,"foci_index":2,"desc":"ดู youtube/ netflix"},
+    {"time_index":322,"node_index":6,"foci_index":5,"desc":"ทาครีมบำรุง"},
+    {"time_index":322,"node_index":11,"foci_index":7,"desc":"อ่านหนังสือ+ทำการบ้าน"},
+    {"time_index":322,"node_index":16,"foci_index":6,"desc":"แวะกินข้าวเย็น"},
+    {"time_index":322,"node_index":21,"foci_index":6,"desc":"กินอาหารเย็นเบาๆ"},
+    {"time_index":322,"node_index":22,"foci_index":8,"desc":"Plan tomorrow tasks"},
+    {"time_index":322,"node_index":23,"foci_index":7,"desc":"ทำการบ้าน ป.โท"},
+    {"time_index":322,"node_index":26,"foci_index":5,"desc":"ทาครีม"},
+    {"time_index":325,"node_index":26,"foci_index":2,"desc":"ดู Series"},
+    {"time_index":326,"node_index":6,"foci_index":2,"desc":"นอนเล่นโทรศัพท์ / ดูทีวี (netflix)"},
+    {"time_index":326,"node_index":12,"foci_index":5,"desc":"Take a shower"},
+    {"time_index":327,"node_index":15,"foci_index":7,"desc":"นั่งทำงาน/การบ้าน"},
+    {"time_index":330,"node_index":1,"foci_index":7,"desc":"นอนอ่านหนังสือ"},
+    {"time_index":330,"node_index":2,"foci_index":7,"desc":"Self Learning"},
+    {"time_index":330,"node_index":5,"foci_index":5,"desc":"อาบน้ำ"},
+    {"time_index":330,"node_index":7,"foci_index":0,"desc":"นอน"},
+    {"time_index":330,"node_index":9,"foci_index":1,"desc":"เล่นเกม Harvest Moon"},
+    {"time_index":330,"node_index":12,"foci_index":2,"desc":"Call girl friend"},
+    {"time_index":330,"node_index":13,"foci_index":5,"desc":"อาบน้ำ"},
+    {"time_index":330,"node_index":17,"foci_index":7,"desc":"ทำการบ้าน อ่านหนังสือ"},
+    {"time_index":330,"node_index":19,"foci_index":7,"desc":"อ่านหนังสือ"},
+    {"time_index":330,"node_index":21,"foci_index":2,"desc":"ดู Netflix"},
+    {"time_index":330,"node_index":21,"foci_index":5,"desc":"อาบน้ำ"},
+    {"time_index":330,"node_index":22,"foci_index":0,"desc":"Sleep to deep"},
+    {"time_index":330,"node_index":24,"foci_index":0,"desc":"อาบน้ำนอน"},
+    {"time_index":330,"node_index":25,"foci_index":1,"desc":"Play ROV"},
+    {"time_index":330,"node_index":27,"foci_index":4,"desc":"เดินทางกลับบ้าน ฟังเพลงด้วย"},
+    {"time_index":330,"node_index":29,"foci_index":5,"desc":"แปรงฟัน"},
+    {"time_index":330,"node_index":32,"foci_index":2,"desc":"นอนเล่นโทรศัพท์ ดูทีวี"},
+    {"time_index":335,"node_index":13,"foci_index":5,"desc":"แต่งตัว"},
+    {"time_index":335,"node_index":24,"foci_index":7,"desc":"ทำการบ้าน"},
+    {"time_index":337,"node_index":0,"foci_index":2,"desc":"ดูทีวี"},
+    {"time_index":337,"node_index":3,"foci_index":2,"desc":"ดูหนัง"},
+    {"time_index":337,"node_index":13,"foci_index":7,"desc":"research หาความรู้เพิ่มเติม"},
+    {"time_index":337,"node_index":16,"foci_index":7,"desc":"อ่านการ์ตูน"},
+    {"time_index":337,"node_index":21,"foci_index":5,"desc":"เป่าผม"},
+    {"time_index":337,"node_index":29,"foci_index":7,"desc":"นั่งดูข่าว"},
+    {"time_index":337,"node_index":30,"foci_index":5,"desc":"อาบน้ำ"},
+    {"time_index":337,"node_index":31,"foci_index":2,"desc":"Line voice call with close friend"},
+    {"time_index":340,"node_index":21,"foci_index":2,"desc":"ดูซีรีย์"},
+    {"time_index":345,"node_index":4,"foci_index":7,"desc":"ทำการบ้าน"},
+    {"time_index":345,"node_index":5,"foci_index":7,"desc":"ทำการบ้าน image analytics "},
+    {"time_index":345,"node_index":6,"foci_index":0,"desc":"ปิดไฟนอนหลับ"},
+    {"time_index":345,"node_index":10,"foci_index":0,"desc":"นอน"},
+    {"time_index":345,"node_index":12,"foci_index":0,"desc":"Go to bed"},
+    {"time_index":345,"node_index":14,"foci_index":5,"desc":"อาบน้ำ"},
+    {"time_index":345,"node_index":15,"foci_index":2,"desc":"พักดู youtube"},
+    {"time_index":345,"node_index":17,"foci_index":2,"desc":"ดู youtube"},
+    {"time_index":345,"node_index":18,"foci_index":1,"desc":"เล่นเกมส์กับเพื่อน"},
+    {"time_index":345,"node_index":20,"foci_index":0,"desc":"Sleep"},
+    {"time_index":345,"node_index":21,"foci_index":7,"desc":"ทำการบ้าน "},
+    {"time_index":345,"node_index":27,"foci_index":11,"desc":"คุยเล่นกับคนในครอบครัว"},
+    {"time_index":345,"node_index":28,"foci_index":0,"desc":"Bed time"},
+    {"time_index":345,"node_index":29,"foci_index":0,"desc":"เข้านอน"},
+    {"time_index":345,"node_index":30,"foci_index":5,"desc":"ทาครีม"},
+    {"time_index":345,"node_index":31,"foci_index":0,"desc":"Go to bed"},
+    {"time_index":345,"node_index":21,"foci_index":2,"desc":"Watch football match ManU vs Liverpool"},
+    {"time_index":349,"node_index":30,"foci_index":2,"desc":"เข้า youtube หาอะไรเรียนเพิ่ม"},
+    {"time_index":352,"node_index":1,"foci_index":0,"desc":"เข้านอน"},
+    {"time_index":352,"node_index":3,"foci_index":2,"desc":"เปิดผีฟัง"},
+    {"time_index":352,"node_index":8,"foci_index":2,"desc":"ดูซีรีย์จีน"},
+    {"time_index":352,"node_index":16,"foci_index":5,"desc":"อาบน้ำ"},
+    {"time_index":352,"node_index":18,"foci_index":6,"desc":"ออกไปซื้อขนมที่เสเว่น"},
+    {"time_index":352,"node_index":21,"foci_index":7,"desc":"เรียนคอร์สออนไลน์"},
+    {"time_index":352,"node_index":23,"foci_index":0,"desc":"สวดมนต์ และเข้านอน"},
+    {"time_index":355,"node_index":15,"foci_index":0,"desc":"เข้านอน"},
+    {"time_index":356,"node_index":13,"foci_index":1,"desc":"เล่นเกมมือถือ"},
+    {"time_index":356,"node_index":30,"foci_index":2,"desc":"ดูทีวี"},
+               
+    ]; 
+    
+        //Movement
+        //In short, to make circles move on your screen, you change the choice attributes. Write a function that does this, and then use setTimeout() to call the function at set intervals.
+        //In the function below, timer(), a choice is randomly selected and then you change a random node to that choice. You resume() the force to set the circles moving again (they eventually settle in a spot otherwise). At the end of the function, setTimeout() is called again to schedule the next call.
+        // Run function periodically to make things move.
+        var timeout;
+        function timer() {           
+            //console.log(document.getElementById("time_number").innerHTML.substring(0, 5));
+            console.log(timeout + '=' + document.getElementById("time_number").innerHTML.substring(0, 5))
+            var k;
+            for (k = 0; k < 721; k++){  //max 721
+                //console.log(k + ' = ' +act_list[k].time_index);
+                //console.log(timeout + '=' + document.getElementById("time_number").innerHTML.substring(0, 5))
+                if (act_list[k].time_index==timeout) {
+                    //console.log(timeout + '=' + document.getElementById("time_number").innerHTML.substring(0, 5) + ',' + act_list[k].node_index + ',' + act_list[k].foci_index + ',' + act_list[k].desc);
+                    var foci_index = act_list[k].foci_index;
+                    var choice = d3.keys(foci)[foci_index];
+                    nodes[act_list[k].node_index].cx = foci[choice].x;
+                    nodes[act_list[k].node_index].cy = foci[choice].y;
+                    nodes[act_list[k].node_index].choice = choice;   
+                    document.getElementById("activities").innerHTML= "ID:" + act_list[k].node_index + '=' + act_list[k].desc;                 
+                    force.resume();
+                };
+            }
+
+            //console.log(timeout);
+            //var t = timeout;
+            //console.log("timeout:" + timeout);
+            //    if (timeout==10) {
+                    // Random place for a node to go
+                    //var choices = d3.keys(foci);
+                    //console.log('choices:'+choices);
+                    //var foci_index = Math.floor( Math.random() * choices.length );   //ระบุตำแหน่งใหม่ในการเคลื่อนย้าย (random ตามเวลา)
+                    
+                    
+                    //console.log('foci_index'+foci_index);                    
+                    
+                       //update choice -> keys = 'topright' , foci_index = new position no 
+                    //var choice = 'toppos';
+                    //console.log('choice:'+choice);
+                    
+                    //var i;
+                    //for (i =0 ; i < 30; i++) {
+
+
+                    /////////////////////////////////////////////////////
+                    //var i = timeout;
+                    //if (i < 31) { 
+                        // Update random node
+                        //var random_index = Math.floor( Math.random() * nodes.length );   //ระบุลำดับที่ของวงกลม ที่จะย้าย
+                        //var random_index = Math.floor(i);  //ระบุลำดับที่ของวงกลม ที่จะย้าย  ตี 2
+                        
+                        //console.log('random_inex:'+random_index);
+                        //console.log(nodes);
+                        //nodes[random_index].cx = foci[choice].x;   //เปลี่ยนตำแหน่งแกน x ไปตามที่เลือก
+                        //nodes[random_index].cy = foci[choice].y;
+                        //nodes[random_index].choice = choice;
+                        
+
+
+                        //force.resume();
+                        
+                    //}
+                    ////////////////////////////////////////////////////////////
+                    
+               // }
+                
+                //act_counts[foci_index] += 1;
+                countnodes();
+                // Update percentages
+                label.selectAll("tspan.actpct")                
+                    //.text(Math.random);
+                    .text(function(d) {
+                        //console.log(d.index);
+                        return readablePercent(act_counts[d.index]);
+                    });
+            // Run it again in a few seconds.
+            //timeout = setTimeout(timer, 600);   //set speed  default = 400  //delay for loop
+                    
+            //console.log(timeout);
+            if (timeout==355) {
+                //timeout = 0;   //set speed  default = 400  //delay for loop
+                clearTimeout;
+            }
+            else {
+                timeout = setTimeout(timer, 240);   //set speed  default = 400  //delay for loop
+            };
+
+            //if (document.getElementById("time_number").innerHTML=='23:59') {force.stop()};
+        }
+        
+        timeout = setTimeout(timer, 4000);  //delay from start  (fix 400)
+        
+
+    </script>
+    </th>
+    </tr>
+    <tr>
+        <th>
+            <h1><div id="Cust_Profile">Customer profile</div> </h1>
+            <h2><div id="Header_1">Gain</div> </h2>
+            <h3><div id="Header_1">-</div> </h3>
+            <h3><div id="Header_1">-</div> </h3>
+            <h3><div id="Header_1">-</div> </h3>
+            <h2><div id="Header_1">Pain</div> </h2>
+            <h3><div id="Header_1">-</div> </h3>
+            <h3><div id="Header_1">-</div> </h3>
+            <h3><div id="Header_1">-</div> </h3>        
+        </th> 
+    </tr>
+</table>
+</body>
+</html>
