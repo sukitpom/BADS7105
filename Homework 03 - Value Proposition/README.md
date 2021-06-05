@@ -15,7 +15,7 @@ Summary data and create the value proposition.
 
 ![Image](https://github.com/sukitpom/BADS7105/blob/master/Homework%2003%20-%20Value%20Proposition/img/Value_proposition.jpg)
 
-# Deploy visulization
+# Create visulization
 Generate visualize by d3.js
 
 Reference: https://flowingdata.com/2015/12/15/a-day-in-the-life-of-americans/
