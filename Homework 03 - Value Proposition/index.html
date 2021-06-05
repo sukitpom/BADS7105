@@ -1,8 +1,7 @@
-<!--https://flowingdata.com/2016/08/23/make-a-moving-bubbles-chart-to-show-clustering-and-distributions/-->
+
 <!DOCTYPE html>
 <head>
-    <title>A day in lif of Master's students (BADS 2020)</title>
-    <!--<link rel="stylesheet" href="style/style.css" type="text/css" media="screen" />-->  
+    <title>Value proposition</title> 
     <style>table th, table th * {
         vertical-align: top;
     }</style>
@@ -33,16 +32,10 @@
             .attr("height", height + margin.top + margin.bottom)
             .append("g")
             .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-        //First, set a few variables, as shown below.
-        //The node_radius variable is, as you’d expect, the radius of each node. 
-        //The padding is the space between each node within a cluster, in pixels. 
-        //cluster_padding refers to the minimum space between nodes that belong to different clusters. 
-        //Finally, num_nodes is the total number of nodes to create for this visualization.
-        var node_radius = 10,  //ขนาดของ node default = 6
-            padding = 1,  //ระยะห่างของแต่ละ node เวลาอยู่ใน cluster
-            cluster_padding = 5, //ระยะในการดีดตัวระหว่างเปลี่ยน cluster
-            num_nodes = 33;  //จำนวน node default = 32
+        var node_radius = 10,
+            padding = 1, 
+            cluster_padding = 5, 
+            num_nodes = 33;  
         var center_act = "Sleeping",
             center_pt = { "x": 750, "y": 365 };
             var act_codes = [
@@ -60,10 +53,6 @@
             {"index": "11", "short": "Family", "desc": "Family activities"},
             {"index": "12", "short": "Shopping", "desc": "Consumer Purchases"},
             ]; 
-        //Then, we want four clusters, each in a different position. 
-        //Also, each cluster will be a different color. We set the x-y positions and colors like so.
-        // Foci //กำหนด position & color สำหรับแต่ละ cluster
-        // freq ในการ coding มีผลต่อ index
         var foci = {
             "cenpos": { x: 750, y: 450, color: "#C0C0C0" },  //sleeping
             "rightbottompos1": { x: 1040, y: 610, color: "#FF3399" },  //gamin
@@ -78,7 +67,6 @@
             "toprightpos1": { x: 950, y: 165, color: "#3366FF" },  //meeting
             "toprightpos2": { x: 1040, y: 290, color: "#9966FF" },   //family
             "rightpos": { x: 1090, y: 450, color: "#FF00FF" },  //shopping
-            
         };
 
 	// Used for percentages by minute
@@ -88,7 +76,6 @@
             .enter().append("text")
             .attr("class", "actlabel")
             .attr("x", function(d, i) {
-                //console.log(d.desc);
                 if (d.desc == center_act) {
                     return center_pt.x;
                 } else {
@@ -96,9 +83,7 @@
                     return 340 * Math.cos(i * theta)+center_pt.x;
                 }    
             })
-            //.attr("y",100);
             .attr("y", function(d, i) {
-                //console.log(d.desc);
                 if (d.desc == center_act) {
                     return center_pt.y;
                 } else {
@@ -108,41 +93,28 @@
                 
             });
             label.append("tspan")
-            //.attr("x",100)
             .attr("x", function() { return d3.select(this.parentNode).attr("x"); })
-            // .attr("dy", "1.3em")
             .attr("text-anchor", "middle")
             .text(function(d) {
                 return d.short;
             });
         label.append("tspan")
-            //.attr("dy",100)
             .attr("dy", "1.3em")
-            //.attr("x",100)
             .attr("x", function() { return d3.select(this.parentNode).attr("x"); })
             .attr("text-anchor", "middle")
             .attr("class", "actpct")
             .text(function(d) {
-                //console.log(act_counts[0]);
-                //return "100%"
                 return act_counts[d.index] + "%";
             });
-            
-        //Initialize num_nodes node objects all in the Center position. 
-        //The added Math.random() to the x and y coordinates is to add some randomness to the initial positions, 
-        //so that the force layout doesn’t get mixed up.        
-        // Create node objects
         var nodes = d3.range(0, num_nodes).map(function(o, i) {
             return {
                 id: "node" + i,
-                x: foci.cenpos.x + Math.random(),   //x: foci.toppos.x + Math.random(),
-                y: foci.cenpos.y + Math.random(),   //y: foci.toppos.y + Math.random(),
+                x: foci.cenpos.x + Math.random(),   
+                y: foci.cenpos.y + Math.random(),   
                 radius: node_radius,
-                choice: "cenpos",  //start cluster
+                choice: "cenpos",  
             }
         });            
-        //Create the force layout, which uses the node objects in its initialization.
-        // Force-directed layout
         var force = d3.layout.force()
             .nodes(nodes)
             .size([width, height])
@@ -151,46 +123,34 @@
             .friction(.91)
             .on("tick", tick)
             .start();
-      
-        //Okay, now add some actual circles to the SVG object. Placement and color is based on nodes.
-        // Draw circle for each node.
         var circle = svg.selectAll("circle")
             .data(nodes)
             .enter().append("circle")
             .attr("id", function(d) { return d.id; })
             .attr("class", "node")
             .style("fill", function(d) { return foci[d.choice].color; });  
-        //For a smooth load, instead of a random, bouncy one, use a transition for the circles as they come onto the screen. This is straight from Mike’s example.
-        // For smoother initial transition to settling spots.
         circle.transition()
-            .duration(1000)   //หน่วงเวลาในการปรากฎครั้งแรกของ node
+            .duration(1000)   
             .delay(function(d,i) { return i * 5; })  
             .attrTween("r", function(d) {
                 var i = d3.interpolate(0, d.radius);
                 return function(t) { return d.radius = i(t); };
             });
-        //In any case, here’s tick(). It runs continuously on loop, changing the position and color of circles as necessary.
-
         function tick(e) {
             circle
-              .each(gravity(0.051 * e.alpha)) //.each(gravity(.051 * e.alpha))   //ความสมูสในการพุ่งออกจากจุดกลาง
+              .each(gravity(0.051 * e.alpha)) 
               .each(collide(.5))
-              .style("fill", function(d) { return foci[d.choice].color; })   //เปลี่ยนสีเวลาย้ายตำแหน่ง
+              .style("fill", function(d) { return foci[d.choice].color; }) 
               .attr("cx", 100)  
-              .attr("cx", function(d) { return d.x; })   //เปลี่ยนตำแหน่ง x
+              .attr("cx", function(d) { return d.x; }) 
               .attr("cy", function(d) { return d.y; });
           }
-        //The gravity() function moves circles towards their defined foci.
-        // Move nodes toward cluster focus.
         function gravity(alpha) {
             return function(d) {
             d.y += (foci[d.choice].y - d.y) * alpha;
             d.x += (foci[d.choice].x - d.x) * alpha;
             };
         }
-        //Then the collide() provides a force that ensures circles don’t overlap. They bounce against each other instead.
-        // Resolve collisions between nodes.
-      
         function collide(alpha) {
             var quadtree = d3.geom.quadtree(nodes);
             return function(d) {
@@ -217,32 +177,24 @@
                 });
             };
         }
-        var timer_digit = d3.timer(function(duration) {  //สร้างตัวแปร timer โดยใช้ function d3.timer โดยใน timer ต้องมี function ที่เก็บค่าระยะเวลาไว้
-
-            //console.log('time digit:' + duration + '=' + document.getElementById("time_number").innerHTML);
-            if (duration < 86500) {
-            //if (duration < 2000) {               
+        var timer_digit = d3.timer(function(duration) { 
+            if (duration < 86500) {          
                 document.getElementById("time_number").innerHTML = String(Math.floor(duration/3600)).padStart(2,'0') + ":" + String(Math.floor((duration % 3600)/60)).padStart(2,'0')
             }
             else
             {
-                document.getElementById("time_number").innerHTML = "23:59";  //ปัดเศษเป็นค่าสุดท้าย
-                //timer.stop(); //ตรวจสอบระยะเวลา
+                document.getElementById("time_number").innerHTML = "23:59"; 
             }
            },4000);
 
     // Output readable percent based on count.
     function readablePercent(n) {
-        
-        //var pct = 100 * n / 1000;
         var pct = n / num_nodes *100;
-        //console.log(n);
         if (pct < 1 && pct > 0) {
             pct = "<1%";
         } else {
             pct = Math.round(pct) + "%";
         }
-        //console.log(pct);
         return pct;
 
     }     
@@ -980,24 +932,14 @@
     {"time_index":352,"node_index":23,"foci_index":0,"desc":"สวดมนต์ และเข้านอน"},
     {"time_index":355,"node_index":15,"foci_index":0,"desc":"เข้านอน"},
     {"time_index":356,"node_index":13,"foci_index":1,"desc":"เล่นเกมมือถือ"},
-    {"time_index":356,"node_index":30,"foci_index":2,"desc":"ดูทีวี"},
-               
+    {"time_index":356,"node_index":30,"foci_index":2,"desc":"ดูทีวี"},              
     ]; 
-    
-        //Movement
-        //In short, to make circles move on your screen, you change the choice attributes. Write a function that does this, and then use setTimeout() to call the function at set intervals.
-        //In the function below, timer(), a choice is randomly selected and then you change a random node to that choice. You resume() the force to set the circles moving again (they eventually settle in a spot otherwise). At the end of the function, setTimeout() is called again to schedule the next call.
-        // Run function periodically to make things move.
         var timeout;
         function timer() {           
-            //console.log(document.getElementById("time_number").innerHTML.substring(0, 5));
             console.log(timeout + '=' + document.getElementById("time_number").innerHTML.substring(0, 5))
             var k;
             for (k = 0; k < 721; k++){  //max 721
-                //console.log(k + ' = ' +act_list[k].time_index);
-                //console.log(timeout + '=' + document.getElementById("time_number").innerHTML.substring(0, 5))
                 if (act_list[k].time_index==timeout) {
-                    //console.log(timeout + '=' + document.getElementById("time_number").innerHTML.substring(0, 5) + ',' + act_list[k].node_index + ',' + act_list[k].foci_index + ',' + act_list[k].desc);
                     var foci_index = act_list[k].foci_index;
                     var choice = d3.keys(foci)[foci_index];
                     nodes[act_list[k].node_index].cx = foci[choice].x;
@@ -1007,71 +949,18 @@
                     force.resume();
                 };
             }
-
-            //console.log(timeout);
-            //var t = timeout;
-            //console.log("timeout:" + timeout);
-            //    if (timeout==10) {
-                    // Random place for a node to go
-                    //var choices = d3.keys(foci);
-                    //console.log('choices:'+choices);
-                    //var foci_index = Math.floor( Math.random() * choices.length );   //ระบุตำแหน่งใหม่ในการเคลื่อนย้าย (random ตามเวลา)
-                    
-                    
-                    //console.log('foci_index'+foci_index);                    
-                    
-                       //update choice -> keys = 'topright' , foci_index = new position no 
-                    //var choice = 'toppos';
-                    //console.log('choice:'+choice);
-                    
-                    //var i;
-                    //for (i =0 ; i < 30; i++) {
-
-
-                    /////////////////////////////////////////////////////
-                    //var i = timeout;
-                    //if (i < 31) { 
-                        // Update random node
-                        //var random_index = Math.floor( Math.random() * nodes.length );   //ระบุลำดับที่ของวงกลม ที่จะย้าย
-                        //var random_index = Math.floor(i);  //ระบุลำดับที่ของวงกลม ที่จะย้าย  ตี 2
-                        
-                        //console.log('random_inex:'+random_index);
-                        //console.log(nodes);
-                        //nodes[random_index].cx = foci[choice].x;   //เปลี่ยนตำแหน่งแกน x ไปตามที่เลือก
-                        //nodes[random_index].cy = foci[choice].y;
-                        //nodes[random_index].choice = choice;
-                        
-
-
-                        //force.resume();
-                        
-                    //}
-                    ////////////////////////////////////////////////////////////
-                    
-               // }
-                
-                //act_counts[foci_index] += 1;
                 countnodes();
                 // Update percentages
                 label.selectAll("tspan.actpct")                
-                    //.text(Math.random);
                     .text(function(d) {
-                        //console.log(d.index);
                         return readablePercent(act_counts[d.index]);
                     });
-            // Run it again in a few seconds.
-            //timeout = setTimeout(timer, 600);   //set speed  default = 400  //delay for loop
-                    
-            //console.log(timeout);
             if (timeout==355) {
-                //timeout = 0;   //set speed  default = 400  //delay for loop
                 clearTimeout;
             }
             else {
                 timeout = setTimeout(timer, 240);   //set speed  default = 400  //delay for loop
             };
-
-            //if (document.getElementById("time_number").innerHTML=='23:59') {force.stop()};
         }
         
         timeout = setTimeout(timer, 4000);  //delay from start  (fix 400)
@@ -1082,7 +971,7 @@
     </tr>
     <tr>
         <th>
-            <h1>Activities to Value proposition</h1>
+            <h1>Fit Value proposition to customer profile</h1>
             <img src="img/Value_proposition.jpg" alt="value_propositon">
         </th> 
     </tr>
