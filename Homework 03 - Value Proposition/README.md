@@ -5,6 +5,9 @@ https://sukitpom.github.io/BADS-7105/Homework%2003%20-%20Value%20proposition/ind
 # Data prepare
 Prepare data in Excel file.
 
+Source file: 
+https://github.com/sukitpom/BADS7105/tree/master/Homework%2003%20-%20Value%20Proposition/data
+
 ![Image](https://github.com/sukitpom/BADS7105/blob/master/Homework%2003%20-%20Value%20Proposition/img/prepare_data.jpg)
 
 # Summary data
@@ -12,10 +15,10 @@ Summary data and create the value proposition.
 
 ![Image](https://github.com/sukitpom/BADS7105/blob/master/Homework%2003%20-%20Value%20Proposition/img/Value_proposition.jpg)
 
-# Deploy visulization
-Genearte visualize by d3.js
+# Create visulization
+Generate visualize by d3.js
 
-Reference: https://flowingdata.com/2016/08/23/make-a-moving-bubbles-chart-to-show-clustering-and-distributions/
+Reference: https://flowingdata.com/2015/12/15/a-day-in-the-life-of-americans/
 
 Add script in html file:
 
