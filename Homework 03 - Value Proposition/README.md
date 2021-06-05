@@ -1,3 +1,7 @@
+# Final Result
+https://sukitpom.github.io/BADS-7105/Homework%2003%20-%20Value%20proposition/index.html
+
+
 # Data prepare
 Prepare data in Excel file.
 
