@@ -2,7 +2,7 @@
 
 ### [Homework 01 – Analysis of customer behaviors](https://github.com/sukitpom/BADS7105/tree/master/Homework%2001%20-%20Analysis%20of%20customer%20behaviors)
 
-### Homework 02 – Jobs to be done: 
+### [Homework 02 – Jobs to be done](https://github.com/sukitpom/BADS7105/tree/master/Homework%2002%20-%20Job%20to%20be%20done)
 
 ### [Homework 03 - Value proposition](https://github.com/sukitpom/BADS7105/tree/master/Homework%2003%20-%20Value%20Proposition)
 
