@@ -6,7 +6,7 @@
 
 ### [Homework 03 - Value proposition](https://github.com/sukitpom/BADS7105/tree/master/Homework%2003%20-%20Value%20Proposition)
 
-### Homework 04 – Customer Journey: 
+### [Homework 04 – Customer Journey](https://github.com/sukitpom/BADS7105/tree/master/Homework%2004%20-%20Customer%20journey)
 
 ### Homework 05 – CLV Dashboard: 
 
