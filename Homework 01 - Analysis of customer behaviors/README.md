@@ -1,4 +1,4 @@
-# Survey result of Master's student in CRM Analytics Class
+# Survey result of Master's student in CRM Analytics and Intelligence Class
 
 ##### ในภาพรวม นศ.ส่วนใหญ๋ ชื่นชอบและบริโภคอาหารไทยเป็นประจำ และชื่นชอบแต่ไม่ค่อยได้บริโภค อาหารในกลุ่ม ชาบู,ปิ้งย่าง และบุฟเฟ่ย์ ด้านการท่องเที่ยวส่วนใหญ๋มีความชื่นชอบ แต่ในไม่ได้มีโอกาสท่องเที่ยวมากนัก ส่วนเนื้อหาที่สนใจ โดยมากจะอยู่ในเรื่องของ การท่องเที่ยวและอาหาร เป็นหลัก
 ![overall](https://github.com/sukitpom/BADS7105/blob/master/Homework%2001%20-%20Analysis%20of%20customer%20behaviors/img/overall.jpg)
