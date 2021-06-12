@@ -1,5 +1,4 @@
-# Final Result
-https://sukitpom.github.io/BADS-7105/Homework%2003%20-%20Value%20proposition/index.html
+## [A day in the life of Master's student (BADS-7105)](https://sukitpom.github.io/BADS-7105/Homework%2003%20-%20Value%20proposition/index.html)
 
 
 # Data prepare
