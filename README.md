@@ -8,7 +8,7 @@
 
 ### [Homework 04 – Customer Journey](https://github.com/sukitpom/BADS7105/tree/master/Homework%2004%20-%20Customer%20journey)
 
-### Homework 05 – CLV Dashboard: 
+### [Homework 05 – CLV Dashboard](https://github.com/sukitpom/BADS7105/tree/master/Homework%2005%20-%20CLV%20Dashboard)
 
 ### Homework 06 – Customer Segmentation: 
 
