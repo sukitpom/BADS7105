@@ -12,7 +12,7 @@
 
 ### Homework 06 – Customer Segmentation: 
 
-### Homework 07 – Product Recommendation: 
+### [Homework 07 – Product Recommendation](https://github.com/sukitpom/BADS7105/tree/master/Homework%2007%20-%20Product%20recommendation)
 
 ### [Homework 08 - Campaign Response Model](https://github.com/sukitpom/BADS7105/tree/master/Homework%2008%20-%20Campaign%20response%20model)
 
