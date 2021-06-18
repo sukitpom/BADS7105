@@ -10,7 +10,7 @@
 
 ### [Homework 05 – CLV Dashboard](https://github.com/sukitpom/BADS7105/tree/master/Homework%2005%20-%20CLV%20Dashboard)
 
-### Homework 06 – Customer Segmentation: 
+### [Homework 06 – Customer Segmentation](https://github.com/sukitpom/BADS7105/tree/master/Homework%2006%20-%20Customer%20segmentation)
 
 ### [Homework 07 – Product Recommendation](https://github.com/sukitpom/BADS7105/tree/master/Homework%2007%20-%20Product%20recommendation)
 
