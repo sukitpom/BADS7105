@@ -14,7 +14,7 @@
 
 ### [Homework 07 – Product Recommendation](https://github.com/sukitpom/BADS7105/tree/master/Homework%2007%20-%20Product%20recommendation)
 
-### [Homework 08 - Campaign Response Model](https://github.com/sukitpom/BADS7105/tree/master/Homework%2008%20-%20Campaign%20response%20model)
+### [Homework 08 - Campaign Response Model](https://github.com/sukitpom/BADS7105/blob/master/Homework%2008%20-%20Campaign%20response%20model/Python%20hyperparameter%20campaign%20response.pdf)
 
 ### [Homework 09 – A/B Testing](https://github.com/sukitpom/BADS7105/tree/master/Homework%2009%20-%20AB%20Testing)
 
