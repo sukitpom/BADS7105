@@ -22,4 +22,4 @@
 
 ### [Homework 11 – Customer Voice Analysis](https://github.com/sukitpom/BADS7105/tree/master/Homework%2011%20-%20Customer%20voice%20analysis)
 
-### Homework 12 - Design Thinking: 
+### [Homework 12 - Design Thinking](https://github.com/sukitpom/BADS7105/tree/master/Homework%2012%20-%20Design%20thinking)
