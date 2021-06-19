@@ -18,7 +18,7 @@
 
 ### [Homework 09 – A/B Testing](https://github.com/sukitpom/BADS7105/tree/master/Homework%2009%20-%20AB%20Testing)
 
-### Homework 10 – Customer Movement Analysis: 
+### [Homework 10 – Customer Movement Analysis](https://github.com/sukitpom/BADS7105/tree/master/Homework%2010%20-%20Customer%20movement)
 
 ### [Homework 11 – Customer Voice Analysis](https://github.com/sukitpom/BADS7105/tree/master/Homework%2011%20-%20Customer%20voice%20analysis)
 
