@@ -20,6 +20,6 @@
 
 ### [Homework 10 – Customer Movement Analysis](https://github.com/sukitpom/BADS7105/tree/master/Homework%2010%20-%20Customer%20movement)
 
-### [Homework 11 – Customer Voice Analysis](https://github.com/sukitpom/BADS7105/tree/master/Homework%2011%20-%20Customer%20voice%20analysis)
+### [Homework 11 – Customer Voice Analysis](https://github.com/sukitpom/BADS7105/blob/master/Homework%2011%20-%20Customer%20voice%20analysis/Customer%20voice%20analysis.pdf)
 
 ### [Homework 12 - Design Thinking](https://github.com/sukitpom/BADS7105/tree/master/Homework%2012%20-%20Design%20thinking)
