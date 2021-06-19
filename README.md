@@ -16,7 +16,7 @@
 
 ### [Homework 08 - Campaign Response Model](https://github.com/sukitpom/BADS7105/tree/master/Homework%2008%20-%20Campaign%20response%20model)
 
-### Homework 09 – A/B Testing: 
+### [Homework 09 – A/B Testing](https://github.com/sukitpom/BADS7105/tree/master/Homework%2009%20-%20AB%20Testing)
 
 ### Homework 10 – Customer Movement Analysis: 
 
